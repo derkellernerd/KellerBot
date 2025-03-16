@@ -1,0 +1,11 @@
+* Todos
+** TODO AccessToken cachen
+** TODO AccessToken refreshen mit RefreshToken
+** TODO Command Datenbank aufbauen
+* Ideen
+** Sound Alerts
+** Video/Gif Alerts
+** Licht steuern
+** Bisschen Web Frontend
+** CLI Client
+** DeviceCode supporten
