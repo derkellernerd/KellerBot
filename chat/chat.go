@@ -5,15 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strings"
 
 	"github.com/derkellernerd/dori/core"
+	"github.com/derkellernerd/dori/model"
+	"github.com/derkellernerd/dori/repository"
 	"github.com/joeyak/go-twitch-eventsub/v3"
 )
 
 type Chat struct {
-	client *twitch.Client
-	env    *core.Environment
+	client      *twitch.Client
+	env         *core.Environment
+	commandRepo *repository.Command
 }
 
 type TwitchChatMessage struct {
@@ -33,7 +38,7 @@ func (c *Chat) httpApiRequest(endpoint string, payload any) error {
 	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewReader(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Client-Id", c.env.Twitch.ClientId)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.env.Twitch.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.env.TwitchSession.AccessToken))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -75,7 +80,7 @@ func (c *Chat) Start() error {
 			_, err := twitch.SubscribeEvent(twitch.SubscribeRequest{
 				SessionID:   message.Payload.Session.ID,
 				ClientID:    c.env.Twitch.ClientId,
-				AccessToken: c.env.Twitch.AccessToken,
+				AccessToken: c.env.TwitchSession.AccessToken,
 				Event:       event,
 				Condition: map[string]string{
 					"broadcaster_user_id": c.env.Twitch.UserId,
@@ -89,9 +94,32 @@ func (c *Chat) Start() error {
 		}
 	})
 	c.client.OnEventChannelChatMessage(func(message twitch.EventChannelChatMessage) {
-		fmt.Printf("Hello chat incoming: %s\n", message.Message.Text)
-		if message.Message.Text == "!ping" {
-			c.SendChatMessage("pong")
+		if strings.HasPrefix(message.Message.Text, "!") {
+			commandParts := strings.Split(message.Message.Text, " ")
+			command := strings.ToLower(commandParts[0])
+			command = command[1:]
+			log.Printf("Command incoming: %s", command)
+
+			cmd, err := c.commandRepo.CommandFindByCommand(command)
+			if err != nil {
+				log.Println(err)
+			}
+			cmd.Increment()
+
+			switch cmd.Type {
+			case model.COMMAND_TYPE_MESSAGE:
+				message, err := cmd.GetDataActionMessage()
+				if err != nil {
+					log.Println(err)
+				}
+				c.SendChatMessage(message.Message)
+				break
+			case model.COMMAND_TYPE_HTTP_ACTION:
+				c.SendChatMessage("Das kann ich noch nicht")
+				break
+			}
+
+			c.commandRepo.CommandUpdate(&cmd)
 		}
 	})
 
@@ -109,11 +137,12 @@ func (c *Chat) Start() error {
 	return err
 }
 
-func NewChat(env *core.Environment) (*Chat, error) {
+func NewChat(env *core.Environment, commandRepo *repository.Command) (*Chat, error) {
 	client := twitch.NewClient()
 
 	return &Chat{
-		client: client,
-		env:    env,
+		client:      client,
+		env:         env,
+		commandRepo: commandRepo,
 	}, nil
 }

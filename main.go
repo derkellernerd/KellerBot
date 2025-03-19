@@ -1,30 +1,131 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"log"
-	"net/http"
+	"os"
+	"slices"
 
 	"github.com/derkellernerd/dori/auth"
 	"github.com/derkellernerd/dori/chat"
 	"github.com/derkellernerd/dori/core"
+	"github.com/derkellernerd/dori/database"
+	"github.com/derkellernerd/dori/handler"
+	"github.com/derkellernerd/dori/model"
+	"github.com/derkellernerd/dori/repository"
+	"github.com/gin-gonic/gin"
 )
 
 const Version = "0.1.0"
+const cacheFileName = "/home/sebastian/.cache/kellerbot.json"
 
 func main() {
 	log.Printf("Hallo, ich bin KellerBot der Twitch Bot: %s", Version)
 
-	env := core.NewEnvironment()
-	chat, err := chat.NewChat(env)
+	twitchSession, err := loadTwitchSession()
+	if err != nil {
+		panic(err)
+	}
 
-	_ = auth.NewTwitchAuth(env, func() {
-		chat.Start()
+	databaseManager := database.NewDatabaseManager()
+	env := core.NewEnvironment(twitchSession)
+	env.DatabaseManager = databaseManager
+
+	commandRepo := repository.NewCommand(env)
+	err = commandRepo.Migrate()
+	if err != nil {
+		panic(err)
+	}
+
+	commandHandler := handler.NewCommand(env, commandRepo)
+
+	commands, err := commandRepo.CommandFindAll()
+
+	wantedCommands := []model.Command{
+		model.NewCommandMessage("ping", "pong"),
+		model.NewCommandMessage("stats", "https://twitchtrends.tv/c/DerKellerNerd"),
+		model.NewCommandMessage("futev", "https://futev.de"),
+	}
+
+	for _, command := range wantedCommands {
+		exists := slices.ContainsFunc(commands, func(n model.Command) bool {
+			return n.Command == command.Command
+		})
+
+		if !exists {
+			err := commandRepo.CommandInsert(&command)
+			if err != nil {
+				panic(err)
+			}
+			log.Printf("Command created: %s", command.Command)
+		}
+	}
+
+	chat, err := chat.NewChat(env, commandRepo)
+
+	if twitchSession.IsAuthenticated() {
+		log.Println("no login needed")
+		go chat.Start()
 		if err != nil {
 			panic(err)
 		}
-	})
+	} else {
+		log.Println("Needs login")
+		_ = auth.NewTwitchAuth(env, func() {
+			saveTwitchSession(env.TwitchSession)
+			go chat.Start()
+			if err != nil {
+				panic(err)
+			}
+		})
+	}
 
-	go http.ListenAndServe(":8080", nil)
+	r := gin.Default()
 
-	select {}
+	apiV1 := r.Group("api/v1")
+	{
+		command := apiV1.Group("command")
+		{
+			command.GET("", commandHandler.CommandGetAll)
+			command.POST("", commandHandler.CommandCreate)
+			command.PUT(":commandId", commandHandler.CommandUpdate)
+			command.DELETE(":commandId", commandHandler.CommandDelete)
+		}
+	}
+
+	r.Run()
+}
+
+func loadTwitchSession() (*core.TwitchSession, error) {
+	twitchSession := &core.TwitchSession{}
+	if _, err := os.Stat(cacheFileName); errors.Is(err, os.ErrNotExist) {
+		return twitchSession, nil
+	}
+
+	fileContent, err := os.ReadFile(cacheFileName)
+	if err != nil {
+		return twitchSession, err
+	}
+
+	err = json.Unmarshal(fileContent, twitchSession)
+	if err != nil {
+		return twitchSession, err
+	}
+
+	log.Printf("Loaded Session from: %s", cacheFileName)
+
+	return twitchSession, nil
+}
+
+func saveTwitchSession(twitchSession *core.TwitchSession) error {
+	jsonBytes, err := json.Marshal(twitchSession)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(cacheFileName, jsonBytes, 0600)
+
+	log.Printf("Saved Session to: %s", cacheFileName)
+	return err
 }

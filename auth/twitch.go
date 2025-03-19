@@ -111,7 +111,10 @@ func (a *TwitchAuth) HandleOAuth2Callback(w http.ResponseWriter, r *http.Request
 	// add the oauth token to session
 	session.Values[oauthTokenKey] = token
 
-	a.env.Twitch.AccessToken = token.AccessToken
+	a.env.TwitchSession.AccessToken = token.AccessToken
+	a.env.TwitchSession.AccessTokenValidTill = token.Expiry
+	a.env.TwitchSession.RefreshToken = token.RefreshToken
+
 	fmt.Println("Access token loaded")
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)

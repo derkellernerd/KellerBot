@@ -1,21 +1,25 @@
 package core
 
-import "os"
+import (
+	"os"
+
+	"github.com/derkellernerd/dori/database"
+)
 
 type Environment struct {
-	Twitch struct {
+	DatabaseManager *database.DatabaseManager
+	Twitch          struct {
 		UserId       string
-		AccessToken  string
 		ClientId     string
 		ClientSecret string
 	}
+	TwitchSession *TwitchSession
 }
 
-func NewEnvironment() *Environment {
+func NewEnvironment(twitchSession *TwitchSession) *Environment {
 	return &Environment{
 		Twitch: struct {
 			UserId       string
-			AccessToken  string
 			ClientId     string
 			ClientSecret string
 		}{
@@ -23,5 +27,6 @@ func NewEnvironment() *Environment {
 			ClientId:     os.Getenv("TWITCH_CLIENT_ID"),
 			ClientSecret: os.Getenv("TWITCH_CLIENT_SECRET"),
 		},
+		TwitchSession: twitchSession,
 	}
 }
