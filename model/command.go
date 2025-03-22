@@ -1,6 +1,10 @@
 package model
 
 import (
+	"fmt"
+	"slices"
+
+	"github.com/derkellernerd/dori/helper"
 	"github.com/goccy/go-json"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -9,6 +13,12 @@ import (
 const (
 	COMMAND_TYPE_MESSAGE     CommandType = "MESSAGE_ACTION"
 	COMMAND_TYPE_HTTP_ACTION CommandType = "HTTP_ACTION"
+)
+
+var (
+	CommandBlacklist []string = []string{
+		"commands",
+	}
 )
 
 type CommandType string
@@ -63,6 +73,16 @@ func (c *Command) GetDataActionMessage() (*CommandActionMessage, error) {
 	return &actionMessage, err
 }
 
+func (c *Command) GetDataActionHttp() (*CommandActionHttp, error) {
+	var actionHttp CommandActionHttp
+	jsonBytes, err := c.Data.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsonBytes, &actionHttp)
+	return &actionHttp, err
+}
+
 type CommandCreateRequest struct {
 	Command string      `binding:"required"`
 	Type    CommandType `binding:"required"`
@@ -81,4 +101,12 @@ type CommandActionHttp struct {
 	Url     string
 	Method  string
 	Payload any
+}
+
+func CommandIsBlacklisted(command string) bool {
+	return slices.Contains(CommandBlacklist, command)
+}
+
+func (ch *CommandActionHttp) Do(a ...any) error {
+	return helper.BasicHttpRequest(ch.Method, fmt.Sprintf(ch.Url, a...), ch.Payload)
 }

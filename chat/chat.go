@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/derkellernerd/dori/core"
@@ -22,9 +23,10 @@ type Chat struct {
 }
 
 type TwitchChatMessage struct {
-	BroadcasterId string `json:"broadcaster_id"`
-	SenderId      string `json:"sender_id"`
-	Message       string `json:"message"`
+	BroadcasterId   string `json:"broadcaster_id"`
+	SenderId        string `json:"sender_id"`
+	Message         string `json:"message"`
+	ParentMessageId string `json:"reply_parent_message_id"`
 }
 
 func (c *Chat) httpApiRequest(endpoint string, payload any) error {
@@ -55,13 +57,22 @@ func (c *Chat) httpApiRequest(endpoint string, payload any) error {
 	return nil
 }
 
-func (c *Chat) SendChatMessage(message string) error {
+func (c *Chat) SendChatAnswer(messageId string, message string, a ...any) error {
 	payload := TwitchChatMessage{
 		BroadcasterId: c.env.Twitch.UserId,
 		SenderId:      c.env.Twitch.UserId,
-		Message:       message,
+		Message:       fmt.Sprintf(message, a...),
 	}
+
+	if messageId != "" {
+		payload.ParentMessageId = messageId
+	}
+
 	return c.httpApiRequest("chat/messages", &payload)
+}
+
+func (c *Chat) SendChatMessage(message string, a ...any) error {
+	return c.SendChatAnswer("", message, a...)
 }
 
 func (c *Chat) Start() error {
@@ -97,7 +108,24 @@ func (c *Chat) Start() error {
 		if strings.HasPrefix(message.Message.Text, "!") {
 			commandParts := strings.Split(message.Message.Text, " ")
 			command := strings.ToLower(commandParts[0])
+			args := commandParts[1:]
 			command = command[1:]
+
+			if command == "commands" {
+				commands, err := c.commandRepo.CommandFindAll()
+				if err != nil {
+					log.Println(err)
+				}
+
+				result := ""
+				for _, cmd := range commands {
+					result = fmt.Sprintf("%s !%s", result, cmd.Command)
+				}
+
+				c.SendChatMessage(fmt.Sprintf("commands available: %s", result))
+				return
+			}
+
 			log.Printf("Command incoming: %s", command)
 
 			cmd, err := c.commandRepo.CommandFindByCommand(command)
@@ -115,7 +143,27 @@ func (c *Chat) Start() error {
 				c.SendChatMessage(message.Message)
 				break
 			case model.COMMAND_TYPE_HTTP_ACTION:
-				c.SendChatMessage("Das kann ich noch nicht")
+				httpAction, err := cmd.GetDataActionHttp()
+				if err != nil {
+					log.Println(err)
+				}
+
+				numberArgs := []any{}
+				for _, arg := range args {
+					val, err := strconv.ParseUint(arg, 10, 64)
+					if err != nil {
+						log.Println(err)
+					}
+
+					numberArgs = append(numberArgs, val)
+				}
+
+				err = httpAction.Do(numberArgs...)
+				if err != nil {
+					c.SendChatAnswer(message.MessageId, "SirSad: %s", err)
+					return
+				}
+				c.SendChatAnswer(message.MessageId, "ICH MACH LICHT!")
 				break
 			}
 

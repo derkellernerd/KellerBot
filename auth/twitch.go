@@ -11,6 +11,7 @@ import (
 	"net/http"
 
 	"github.com/derkellernerd/dori/core"
+	"github.com/gin-gonic/gin"
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/twitch"
@@ -37,18 +38,19 @@ var (
 
 // HandleRoot is a Handler that shows a login button. In production, if the frontend is served / generated
 // by Go, it should use html/template to prevent XSS attacks.
-func (a *TwitchAuth) HandleRoot(w http.ResponseWriter, r *http.Request) (err error) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`<html><body><a href="/login">Login using Twitch</a></body></html>`))
+func (a *TwitchAuth) HandleRoot(c *gin.Context) {
+
+	c.Header("Content-Type", "text/html; charset=utf-8")
+
+	c.String(http.StatusOK, `<html><body><a href="/login">Login using Twitch</a></body></html>`)
 
 	return
 }
 
 // HandleLogin is a Handler that redirects the user to Twitch for login, and provides the 'state'
 // parameter which protects against login CSRF.
-func (a *TwitchAuth) HandleLogin(w http.ResponseWriter, r *http.Request) (err error) {
-	session, err := cookieStore.Get(r, oauthSessionName)
+func (a *TwitchAuth) HandleLogin(c *gin.Context) {
+	_, err := c.Cookie(oauthSessionName)
 	if err != nil {
 		log.Printf("corrupted session %s -- generated new", err)
 		err = nil
@@ -56,60 +58,50 @@ func (a *TwitchAuth) HandleLogin(w http.ResponseWriter, r *http.Request) (err er
 
 	var tokenBytes [255]byte
 	if _, err := rand.Read(tokenBytes[:]); err != nil {
-		return AnnotateError(err, "Couldn't generate a session!", http.StatusInternalServerError)
+		c.AbortWithError(http.StatusInternalServerError, err)
+		return
 	}
 
 	state := hex.EncodeToString(tokenBytes[:])
 
-	session.AddFlash(state, stateCallbackKey)
-
-	if err = session.Save(r, w); err != nil {
-		return
-	}
-
-	http.Redirect(w, r, oauth2Config.AuthCodeURL(state), http.StatusTemporaryRedirect)
+	fmt.Printf("STATE: %s\n", state)
+	c.SetCookie(stateCallbackKey, state, 3600, "/", "localhost", false, true)
+	c.Redirect(http.StatusTemporaryRedirect, oauth2Config.AuthCodeURL(state))
 
 	return
 }
 
 // HandleOauth2Callback is a Handler for oauth's 'redirect_uri' endpoint;
 // it validates the state token and retrieves an OAuth token from the request parameters.
-func (a *TwitchAuth) HandleOAuth2Callback(w http.ResponseWriter, r *http.Request) (err error) {
-	session, err := cookieStore.Get(r, oauthSessionName)
+func (a *TwitchAuth) HandleOAuth2Callback(c *gin.Context) {
+	_, err := c.Cookie(oauthSessionName)
 	if err != nil {
 		log.Printf("corrupted session %s -- generated new", err)
 		err = nil
 	}
 
-	// ensure we flush the csrf challenge even if the request is ultimately unsuccessful
-	defer func() {
-		if err := session.Save(r, w); err != nil {
-			log.Printf("error saving session: %s", err)
-		}
-	}()
-
-	switch stateChallenge, state := session.Flashes(stateCallbackKey), r.FormValue("state"); {
+	stateChallenge, _ := c.Cookie(stateCallbackKey)
+	state := c.Query("state")
+	fmt.Printf("Post State: %s\n", state)
+	switch stateChallenge, state := stateChallenge, state; {
 	case state == "", len(stateChallenge) < 1:
 		err = errors.New("missing state challenge")
-	case state != stateChallenge[0]:
-		err = fmt.Errorf("invalid oauth state, expected '%s', got '%s'\n", state, stateChallenge[0])
+	case state != stateChallenge:
+		err = fmt.Errorf("invalid oauth state, expected '%s', got '%s'\n", state, stateChallenge)
 	}
 
 	if err != nil {
-		return AnnotateError(
-			err,
-			"Couldn't verify your confirmation, please try again.",
-			http.StatusBadRequest,
-		)
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
 	}
 
-	token, err := oauth2Config.Exchange(context.Background(), r.FormValue("code"))
+	token, err := oauth2Config.Exchange(context.Background(), c.Query("code"))
 	if err != nil {
 		return
 	}
 
 	// add the oauth token to session
-	session.Values[oauthTokenKey] = token
+	//session.Values[oauthTokenKey] = token
 
 	a.env.TwitchSession.AccessToken = token.AccessToken
 	a.env.TwitchSession.AccessTokenValidTill = token.Expiry
@@ -117,7 +109,7 @@ func (a *TwitchAuth) HandleOAuth2Callback(w http.ResponseWriter, r *http.Request
 
 	fmt.Println("Access token loaded")
 
-	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+	c.Redirect(http.StatusTemporaryRedirect, "/")
 	a.callback()
 
 	return
@@ -154,7 +146,7 @@ func AnnotateError(err error, annotation string, code int) error {
 
 type Handler func(http.ResponseWriter, *http.Request) error
 
-func NewTwitchAuth(env *core.Environment, callback func()) *TwitchAuth {
+func NewTwitchAuth(env *core.Environment, router *gin.Engine, callback func()) *TwitchAuth {
 	gob.Register(&oauth2.Token{})
 
 	oauth2Config = &oauth2.Config{
@@ -165,51 +157,14 @@ func NewTwitchAuth(env *core.Environment, callback func()) *TwitchAuth {
 		RedirectURL:  redirectURL,
 	}
 
-	var middleware = func(h Handler) Handler {
-		return func(w http.ResponseWriter, r *http.Request) (err error) {
-			// parse POST body, limit request size
-			if err = r.ParseForm(); err != nil {
-				return AnnotateError(err, "Something went wrong! Please try again.", http.StatusBadRequest)
-			}
-
-			return h(w, r)
-		}
-	}
-
-	// errorHandling is a middleware that centralises error handling.
-	// this prevents a lot of duplication and prevents issues where a missing
-	// return causes an error to be printed, but functionality to otherwise continue
-	// see https://blog.golang.org/error-handling-and-go
-	var errorHandling = func(handler func(w http.ResponseWriter, r *http.Request) error) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if err := handler(w, r); err != nil {
-				var errorString string = "Something went wrong! Please try again."
-				var errorCode int = 500
-
-				if v, ok := err.(HumanReadableError); ok {
-					errorString, errorCode = v.HumanError(), v.HTTPCode()
-				}
-
-				log.Println(err)
-				w.Write([]byte(errorString))
-				w.WriteHeader(errorCode)
-				return
-			}
-		})
-	}
-
-	var handleFunc = func(path string, handler Handler) {
-		http.Handle(path, errorHandling(middleware(handler)))
-	}
-
 	ta := &TwitchAuth{
 		env:      env,
 		callback: callback,
 	}
 
-	handleFunc("/", ta.HandleRoot)
-	handleFunc("/login", ta.HandleLogin)
-	handleFunc("/redirect", ta.HandleOAuth2Callback)
+	router.GET("/", ta.HandleRoot)
+	router.GET("/login", ta.HandleLogin)
+	router.GET("/redirect", ta.HandleOAuth2Callback)
 
 	return ta
 }

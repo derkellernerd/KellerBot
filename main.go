@@ -12,6 +12,7 @@ import (
 	"github.com/derkellernerd/dori/core"
 	"github.com/derkellernerd/dori/database"
 	"github.com/derkellernerd/dori/handler"
+	"github.com/derkellernerd/dori/middleware"
 	"github.com/derkellernerd/dori/model"
 	"github.com/derkellernerd/dori/repository"
 	"github.com/gin-gonic/gin"
@@ -62,7 +63,18 @@ func main() {
 		}
 	}
 
+	r := gin.Default()
+	r.Use(middleware.AcceptCors)
+
 	chat, err := chat.NewChat(env, commandRepo)
+
+	_ = auth.NewTwitchAuth(env, r, func() {
+		saveTwitchSession(env.TwitchSession)
+		go chat.Start()
+		if err != nil {
+			panic(err)
+		}
+	})
 
 	if twitchSession.IsAuthenticated() {
 		log.Println("no login needed")
@@ -70,18 +82,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-	} else {
-		log.Println("Needs login")
-		_ = auth.NewTwitchAuth(env, func() {
-			saveTwitchSession(env.TwitchSession)
-			go chat.Start()
-			if err != nil {
-				panic(err)
-			}
-		})
 	}
-
-	r := gin.Default()
 
 	apiV1 := r.Group("api/v1")
 	{

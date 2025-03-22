@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/derkellernerd/dori/core"
 	"github.com/derkellernerd/dori/model"
@@ -38,6 +40,11 @@ func (h *Command) CommandCreate(c *gin.Context) {
 	err := c.BindJSON(&commandCreateRequest)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, NewErrorResponse(err))
+		return
+	}
+
+	if model.CommandIsBlacklisted(strings.ToLower(commandCreateRequest.Command)) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, NewErrorResponse(fmt.Errorf("command %s is blacklisted", commandCreateRequest.Command)))
 		return
 	}
 
