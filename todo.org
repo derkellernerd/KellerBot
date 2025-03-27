@@ -4,10 +4,12 @@ CLOSED: [2025-03-19 Wed 21:47]
 ** TODO AccessToken refreshen mit RefreshToken
 ** DONE Command Datenbank aufbauen
 CLOSED: [2025-03-19 Wed 22:38]
+** Sound Alerts
 ** TODO Licht steuern
 * Ideen
-** Sound Alerts
 ** Video/Gif Alerts
 ** Bisschen Web Frontend
 ** CLI Client
 ** DeviceCode supporten
+** Chatbox
+

@@ -20,6 +20,7 @@ type Chat struct {
 	client      *twitch.Client
 	env         *core.Environment
 	commandRepo *repository.Command
+	chatChannel chan model.ChatEvent
 }
 
 type TwitchChatMessage struct {
@@ -105,6 +106,12 @@ func (c *Chat) Start() error {
 		}
 	})
 	c.client.OnEventChannelChatMessage(func(message twitch.EventChannelChatMessage) {
+		chatEvent := model.ChatEvent{
+			Message: message.Message.Text,
+			User:    message.ChatterUserName,
+		}
+		c.chatChannel <- chatEvent
+
 		if strings.HasPrefix(message.Message.Text, "!") {
 			commandParts := strings.Split(message.Message.Text, " ")
 			command := strings.ToLower(commandParts[0])
@@ -185,12 +192,13 @@ func (c *Chat) Start() error {
 	return err
 }
 
-func NewChat(env *core.Environment, commandRepo *repository.Command) (*Chat, error) {
+func NewChat(env *core.Environment, commandRepo *repository.Command, chatChannel chan model.ChatEvent) (*Chat, error) {
 	client := twitch.NewClient()
 
 	return &Chat{
 		client:      client,
 		env:         env,
 		commandRepo: commandRepo,
+		chatChannel: chatChannel,
 	}, nil
 }

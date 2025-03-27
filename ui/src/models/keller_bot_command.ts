@@ -1,4 +1,4 @@
-import { autoImplement } from '@/helper/functions.ts'
+import { autoImplement } from 'src/helper/functions';
 
 export interface ApiKellerBotCommand {
   Id: number;
@@ -22,5 +22,21 @@ export interface ApiKellerBotCommandMessageAction {
 export class KellerBotCommand extends autoImplement<ApiKellerBotCommand>() {
   static fromApi(apiItem: ApiKellerBotCommand) : KellerBotCommand {
     return new KellerBotCommand(apiItem);
+  }
+
+  get typeLabel() {
+    switch (this.Type) {
+      case 'MESSAGE_ACTION':
+        return 'Message'
+      case 'HTTP_ACTION':
+        return 'HTTP'
+    }
+  }
+
+  static get commandTypes() {
+    return [
+      'MESSAGE_ACTION',
+      'HTTP_ACTION'
+    ]
   }
 }

@@ -39,7 +39,10 @@ func main() {
 		panic(err)
 	}
 
+	chatChannel := make(chan model.ChatEvent)
+
 	commandHandler := handler.NewCommand(env, commandRepo)
+	eventHandler := handler.NewEvent(env, chatChannel)
 
 	commands, err := commandRepo.CommandFindAll()
 
@@ -66,7 +69,7 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, commandRepo)
+	chat, err := chat.NewChat(env, commandRepo, chatChannel)
 
 	_ = auth.NewTwitchAuth(env, r, func() {
 		saveTwitchSession(env.TwitchSession)
@@ -92,6 +95,11 @@ func main() {
 			command.POST("", commandHandler.CommandCreate)
 			command.PUT(":commandId", commandHandler.CommandUpdate)
 			command.DELETE(":commandId", commandHandler.CommandDelete)
+		}
+
+		event := apiV1.Group("event")
+		{
+			event.GET("chat", eventHandler.ChatEventHandler)
 		}
 	}
 
