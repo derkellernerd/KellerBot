@@ -5,6 +5,7 @@ import type {
   ApiKellerBotCommandCreateRequest
 } from 'src/models/keller_bot_command.ts'
 import { api } from 'boot/axios';
+import type { ApiKellerBotChatEvent } from 'src/models/keller_bot_event';
 
 class KellerBot {
   getCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand[]>>> {
@@ -24,6 +25,10 @@ class KellerBot {
       responseType: 'stream',
       adapter: 'fetch'
     })
+  }
+
+  createChatEventTest(message: ApiKellerBotChatEvent) : Promise<AxiosResponse<unknown>> {
+    return api.post('/api/v1/event/chat', message)
   }
 }
 

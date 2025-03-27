@@ -100,6 +100,7 @@ func main() {
 		event := apiV1.Group("event")
 		{
 			event.GET("chat", eventHandler.ChatEventHandler)
+			event.POST("chat", eventHandler.ChatEventTest)
 		}
 	}
 

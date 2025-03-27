@@ -2,6 +2,7 @@ package handler
 
 import (
 	"io"
+	"net/http"
 
 	"github.com/derkellernerd/dori/core"
 	"github.com/derkellernerd/dori/model"
@@ -30,4 +31,18 @@ func (h *Event) ChatEventHandler(c *gin.Context) {
 	})
 
 	return
+}
+
+func (h *Event) ChatEventTest(c *gin.Context) {
+	var message model.ChatEvent
+
+	err := c.BindJSON(&message)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, NewErrorResponse(err))
+		return
+	}
+
+	h.chatChannel <- message
+
+	c.Status(http.StatusNoContent)
 }

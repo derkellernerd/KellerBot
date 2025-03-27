@@ -35,6 +35,11 @@
             <q-item-label>Command</q-item-label>
           </q-item-section>
         </q-item>
+        <q-item clickable v-ripple :to="{name: 'Event'}">
+          <q-item-section>
+            <q-item-label>Event</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
