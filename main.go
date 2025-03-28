@@ -39,10 +39,18 @@ func main() {
 		panic(err)
 	}
 
+	alertRepo := repository.NewAlert(env)
+	err = alertRepo.Migrate()
+	if err != nil {
+		panic(err)
+	}
+
 	chatChannel := make(chan model.ChatEvent)
+	alertChannel := make(chan model.Alert)
 
 	commandHandler := handler.NewCommand(env, commandRepo)
-	eventHandler := handler.NewEvent(env, chatChannel)
+	eventHandler := handler.NewEvent(env, chatChannel, alertChannel, alertRepo)
+	alertHandler := handler.NewAlert(env, alertRepo)
 
 	commands, err := commandRepo.CommandFindAll()
 
@@ -101,8 +109,18 @@ func main() {
 		{
 			event.GET("chat", eventHandler.ChatEventHandler)
 			event.POST("chat", eventHandler.ChatEventTest)
+			event.GET("alert", eventHandler.AlertEventHandler)
+			event.POST("alert", eventHandler.AlertEventTest)
+		}
+
+		alert := apiV1.Group("alert")
+		{
+			alert.GET("", alertHandler.AlertGetAll)
+			alert.POST("", alertHandler.AlertCreate)
 		}
 	}
+
+	r.GET("alert/:alertId", alertHandler.AlertGetFile)
 
 	r.Run()
 }

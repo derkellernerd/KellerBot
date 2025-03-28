@@ -7,13 +7,15 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { name: 'CommandOverview', path: 'command', component: () => import('pages/CommandsOverviewPage.vue') },
+      { name: 'AlertOverview', path: 'alert', component: () => import('pages/AlertOverviewPage.vue') },
       { name: 'Event', path: 'event', component: () => import('pages/EventPage.vue') }
     ],
   },
   {
     path: '/box',
     children: [
-      {path: 'chat', component: () => import('pages/boxes/ChatBoxPage.vue')}
+      {path: 'chat', component: () => import('pages/boxes/ChatBoxPage.vue')},
+      {path: 'alert', component: () => import('pages/boxes/AlertBoxPage.vue')}
     ]
   },
 
@@ -26,3 +28,4 @@ const routes: RouteRecordRaw[] = [
 ];
 
 export default routes;
+
