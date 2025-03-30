@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/derkellernerd/dori/helper"
 	"github.com/goccy/go-json"
@@ -11,8 +12,9 @@ import (
 )
 
 const (
-	COMMAND_TYPE_MESSAGE     CommandType = "MESSAGE_ACTION"
-	COMMAND_TYPE_HTTP_ACTION CommandType = "HTTP_ACTION"
+	COMMAND_TYPE_MESSAGE      CommandType = "MESSAGE_ACTION"
+	COMMAND_TYPE_HTTP_ACTION  CommandType = "HTTP_ACTION"
+	COMMAND_TYPE_ALERT_ACTION CommandType = "ALERT_ACTION"
 )
 
 var (
@@ -25,10 +27,12 @@ type CommandType string
 
 type Command struct {
 	gorm.Model
-	Command string `gorm:"unique"`
-	Type    CommandType
-	Data    datatypes.JSON
-	Used    uint64
+	Command          string `gorm:"unique"`
+	Type             CommandType
+	Data             datatypes.JSON
+	Used             uint64
+	TimeoutInSeconds uint64
+	LastUsed         time.Time
 }
 
 func NewCommand(command string, commandType CommandType, data any) Command {
@@ -83,14 +87,26 @@ func (c *Command) GetDataActionHttp() (*CommandActionHttp, error) {
 	return &actionHttp, err
 }
 
+func (c *Command) GetDataActionAlert() (*CommandActionAlert, error) {
+	var action CommandActionAlert
+	jsonBytes, err := c.Data.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsonBytes, &action)
+	return &action, err
+}
+
 type CommandCreateRequest struct {
-	Command string      `binding:"required"`
-	Type    CommandType `binding:"required"`
-	Data    any         `binding:"required"`
+	Command          string      `binding:"required"`
+	Type             CommandType `binding:"required"`
+	Data             any         `binding:"required"`
+	TimeoutInSeconds uint64
 }
 
 type CommandUpdateRequest struct {
-	Data any `binding:"required"`
+	Data             any `binding:"required"`
+	TimeoutInSeconds uint64
 }
 
 type CommandActionMessage struct {
@@ -101,6 +117,10 @@ type CommandActionHttp struct {
 	Url     string
 	Method  string
 	Payload any
+}
+
+type CommandActionAlert struct {
+	Alert string
 }
 
 func CommandIsBlacklisted(command string) bool {

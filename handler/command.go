@@ -49,8 +49,9 @@ func (h *Command) CommandCreate(c *gin.Context) {
 	}
 
 	command := model.Command{
-		Command: commandCreateRequest.Command,
-		Type:    commandCreateRequest.Type,
+		Command:          commandCreateRequest.Command,
+		Type:             commandCreateRequest.Type,
+		TimeoutInSeconds: commandCreateRequest.TimeoutInSeconds,
 	}
 
 	command.SetData(commandCreateRequest.Data)
@@ -82,6 +83,7 @@ func (h *Command) CommandUpdate(c *gin.Context) {
 	}
 
 	command.SetData(commandUpdateRequest.Data)
+	command.TimeoutInSeconds = commandUpdateRequest.TimeoutInSeconds
 
 	err = h.commandRepo.CommandUpdate(&command)
 	if err != nil {

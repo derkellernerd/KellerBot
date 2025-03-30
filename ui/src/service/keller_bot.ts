@@ -45,6 +45,21 @@ class KellerBot {
   getAlerts():Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert[]>>> {
     return api.get('/api/v1/alert')
   }
+
+  createAlert(alert: ApiKellerBotAlert):Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
+    return api.post('/api/v1/alert', alert)
+  }
+
+  uploadAlertFile(alertId: number, file: File) : Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
+    const fileData = new FormData()
+    fileData.append('file', file);
+
+    return api.post(`/api/v1/alert/${alertId}/upload`, fileData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  }
 }
 
 export default new KellerBot();

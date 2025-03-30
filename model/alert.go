@@ -97,5 +97,4 @@ type AlertTypeGif struct {
 type AlertCreateRequest struct {
 	Name string    `binding:"required"`
 	Type AlertType `binding:"required"`
-	Data any       `binding:"required"`
 }

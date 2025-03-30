@@ -77,7 +77,7 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, commandRepo, chatChannel)
+	chat, err := chat.NewChat(env, commandRepo, chatChannel, alertChannel, alertRepo)
 
 	_ = auth.NewTwitchAuth(env, r, func() {
 		saveTwitchSession(env.TwitchSession)
@@ -117,6 +117,7 @@ func main() {
 		{
 			alert.GET("", alertHandler.AlertGetAll)
 			alert.POST("", alertHandler.AlertCreate)
+			alert.POST(":alertId/upload", alertHandler.AlertUploadFile)
 		}
 	}
 

@@ -5,7 +5,8 @@ CLOSED: [2025-03-19 Wed 21:47]
 ** DONE Command Datenbank aufbauen
 CLOSED: [2025-03-19 Wed 22:38]
 ** Sound Alerts
-** TODO Licht steuern
+** DONE Licht steuern
+** Chat Event Stream sollte auch funktionieren wenn kein Abnehmer da ist oder mehrere Abnehmer da sind
 * Ideen
 ** Video/Gif Alerts
 ** Bisschen Web Frontend

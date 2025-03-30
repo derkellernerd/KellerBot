@@ -64,7 +64,7 @@ onMounted(() => {
 })
 </script>
 <template>
-  <img v-if="gifSource" :src="gifSource" alt="gif"/>
+  <img v-if="gifSource" class="full-height full-width"  fit="fill" :src="gifSource" alt="gif"/>
   <video v-if="videoSource" :src="videoSource"/>
 </template>
 

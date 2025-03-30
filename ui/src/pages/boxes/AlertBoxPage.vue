@@ -6,7 +6,7 @@ import AlertEventComponent from 'components/event/AlertEventComponent.vue';
   <q-layout>
     <q-page-container>
       <q-page class="bg-black text-white text-h4">
-        <AlertEventComponent/>
+        <AlertEventComponent class="full-width full-height"/>
       </q-page>
     </q-page-container>
   </q-layout>

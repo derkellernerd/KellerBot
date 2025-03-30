@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/derkellernerd/dori/core"
 	"github.com/derkellernerd/dori/model"
@@ -17,10 +18,12 @@ import (
 )
 
 type Chat struct {
-	client      *twitch.Client
-	env         *core.Environment
-	commandRepo *repository.Command
-	chatChannel chan model.ChatEvent
+	client       *twitch.Client
+	env          *core.Environment
+	commandRepo  *repository.Command
+	chatChannel  chan model.ChatEvent
+	alertChannel chan model.Alert
+	alertRepo    *repository.Alert
 }
 
 type TwitchChatMessage struct {
@@ -110,9 +113,12 @@ func (c *Chat) Start() error {
 			Message: message.Message.Text,
 			User:    message.ChatterUserName,
 		}
-		c.chatChannel <- chatEvent
+		go func() {
+			c.chatChannel <- chatEvent
+		}()
 
 		if strings.HasPrefix(message.Message.Text, "!") {
+			log.Println("Incoming command")
 			commandParts := strings.Split(message.Message.Text, " ")
 			command := strings.ToLower(commandParts[0])
 			args := commandParts[1:]
@@ -133,13 +139,20 @@ func (c *Chat) Start() error {
 				return
 			}
 
-			log.Printf("Command incoming: %s", command)
-
 			cmd, err := c.commandRepo.CommandFindByCommand(command)
 			if err != nil {
 				log.Println(err)
 			}
+
+			durationBetweenExecutions := time.Now().Sub(cmd.LastUsed).Seconds()
+			log.Printf("Last used: %f seconds", durationBetweenExecutions)
+			if cmd.TimeoutInSeconds > 0 && durationBetweenExecutions < float64(cmd.TimeoutInSeconds) {
+				c.SendChatAnswer(message.MessageId, "Command noch %d Sekunden nicht verfuegbar", cmd.TimeoutInSeconds-uint64(durationBetweenExecutions))
+				return
+			}
+
 			cmd.Increment()
+			cmd.LastUsed = time.Now()
 
 			switch cmd.Type {
 			case model.COMMAND_TYPE_MESSAGE:
@@ -172,6 +185,21 @@ func (c *Chat) Start() error {
 				}
 				c.SendChatAnswer(message.MessageId, "ICH MACH LICHT!")
 				break
+			case model.COMMAND_TYPE_ALERT_ACTION:
+				alertAction, err := cmd.GetDataActionAlert()
+				if err != nil {
+					log.Println(err)
+				}
+
+				alert, err := c.alertRepo.AlertFindByName(alertAction.Alert)
+				if err != nil {
+					log.Println(err)
+				}
+
+				go func() {
+					log.Printf("Sending alert %s", alert.Name)
+					c.alertChannel <- alert
+				}()
 			}
 
 			c.commandRepo.CommandUpdate(&cmd)
@@ -192,13 +220,15 @@ func (c *Chat) Start() error {
 	return err
 }
 
-func NewChat(env *core.Environment, commandRepo *repository.Command, chatChannel chan model.ChatEvent) (*Chat, error) {
+func NewChat(env *core.Environment, commandRepo *repository.Command, chatChannel chan model.ChatEvent, alertChannel chan model.Alert, alertRepo *repository.Alert) (*Chat, error) {
 	client := twitch.NewClient()
 
 	return &Chat{
-		client:      client,
-		env:         env,
-		commandRepo: commandRepo,
-		chatChannel: chatChannel,
+		client:       client,
+		env:          env,
+		commandRepo:  commandRepo,
+		chatChannel:  chatChannel,
+		alertChannel: alertChannel,
+		alertRepo:    alertRepo,
 	}, nil
 }

@@ -3,9 +3,9 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strconv"
 
-	
 	"github.com/derkellernerd/dori/core"
 	"github.com/derkellernerd/dori/model"
 	"github.com/derkellernerd/dori/repository"
@@ -13,13 +13,13 @@ import (
 )
 
 type Alert struct {
-	env *core.Environment
+	env       *core.Environment
 	alertRepo *repository.Alert
 }
 
 func NewAlert(env *core.Environment, alertRepo *repository.Alert) *Alert {
 	return &Alert{
-		env: env,
+		env:       env,
 		alertRepo: alertRepo,
 	}
 }
@@ -48,19 +48,59 @@ func (h *Alert) AlertCreate(c *gin.Context) {
 		Type: alertCreateRequest.Type,
 	}
 
-	err = alert.SetData(alertCreateRequest.Data)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
-		return
-	}
-
-
 	err = h.alertRepo.AlertInsert(&alert)
 
 	c.JSON(http.StatusCreated, NewSuccessResponse(alert))
 }
 
-func (h *Alert) AlertGetFile(c *gin.Context ) {
+func (h *Alert) AlertUploadFile(c *gin.Context) {
+	alertIdParam := c.Param("alertId")
+	alertId, err := strconv.ParseUint(alertIdParam, 10, 64)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, NewErrorResponse(err))
+		return
+	}
+
+	alert, err := h.alertRepo.AlertFindById(uint(alertId))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	file, _ := c.FormFile("file")
+	destinationFilePath := path.Join("data", "alerts", fmt.Sprintf("%d", alert.ID))
+	c.SaveUploadedFile(file, destinationFilePath)
+
+	err = nil
+	switch alert.Type {
+	case model.ALERT_TYPE_GIF:
+		alertGif := model.AlertTypeGif{
+			GifPath: destinationFilePath,
+		}
+		alert.SetData(alertGif)
+		break
+	case model.ALERT_TYPE_GIF_SOUND:
+	case model.ALERT_TYPE_SOUND:
+	case model.ALERT_TYPE_VIDEO:
+	default:
+		err = fmt.Errorf("not implemented right now")
+	}
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, NewErrorResponse(err))
+		return
+	}
+
+	err = h.alertRepo.AlertUpdate(&alert)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, alert)
+}
+
+func (h *Alert) AlertGetFile(c *gin.Context) {
 	alertIdParam := c.Param("alertId")
 	alertId, err := strconv.ParseUint(alertIdParam, 10, 64)
 	if err != nil {
@@ -77,7 +117,7 @@ func (h *Alert) AlertGetFile(c *gin.Context ) {
 	}
 
 	filePath := ""
-	
+
 	switch alert.Type {
 	case model.ALERT_TYPE_SOUND:
 		alertSound, err := alert.GetDataSound()
@@ -99,7 +139,7 @@ func (h *Alert) AlertGetFile(c *gin.Context ) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 			return
 		}
-		filePath = fmt.Sprintf("./data/alerts/%s", alertGif.GifPath)
+		filePath = alertGif.GifPath
 	case model.ALERT_TYPE_GIF_SOUND:
 		alertGifSound, err := alert.GetDataGifSound()
 		if err != nil {
