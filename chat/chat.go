@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/derkellernerd/dori/core"
+	"github.com/derkellernerd/dori/handler"
 	"github.com/derkellernerd/dori/model"
 	"github.com/derkellernerd/dori/repository"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -21,9 +22,8 @@ type Chat struct {
 	client       *twitch.Client
 	env          *core.Environment
 	commandRepo  *repository.Command
-	chatChannel  chan model.ChatEvent
-	alertChannel chan model.Alert
 	alertRepo    *repository.Alert
+	eventHandler *handler.Event
 }
 
 type TwitchChatMessage struct {
@@ -114,7 +114,7 @@ func (c *Chat) Start() error {
 			User:    message.ChatterUserName,
 		}
 		go func() {
-			c.chatChannel <- chatEvent
+			c.eventHandler.SendChatEvent(&chatEvent)
 		}()
 
 		if strings.HasPrefix(message.Message.Text, "!") {
@@ -198,7 +198,7 @@ func (c *Chat) Start() error {
 
 				go func() {
 					log.Printf("Sending alert %s", alert.Name)
-					c.alertChannel <- alert
+					c.eventHandler.SendAlertEvent(&alert)
 				}()
 			}
 
@@ -220,15 +220,14 @@ func (c *Chat) Start() error {
 	return err
 }
 
-func NewChat(env *core.Environment, commandRepo *repository.Command, chatChannel chan model.ChatEvent, alertChannel chan model.Alert, alertRepo *repository.Alert) (*Chat, error) {
+func NewChat(env *core.Environment, commandRepo *repository.Command, alertRepo *repository.Alert, eventHandler *handler.Event) (*Chat, error) {
 	client := twitch.NewClient()
 
 	return &Chat{
 		client:       client,
 		env:          env,
 		commandRepo:  commandRepo,
-		chatChannel:  chatChannel,
-		alertChannel: alertChannel,
 		alertRepo:    alertRepo,
+		eventHandler: eventHandler,
 	}, nil
 }

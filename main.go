@@ -45,11 +45,8 @@ func main() {
 		panic(err)
 	}
 
-	chatChannel := make(chan model.ChatEvent)
-	alertChannel := make(chan model.Alert)
-
 	commandHandler := handler.NewCommand(env, commandRepo)
-	eventHandler := handler.NewEvent(env, chatChannel, alertChannel, alertRepo)
+	eventHandler := handler.NewEvent(env, alertRepo)
 	alertHandler := handler.NewAlert(env, alertRepo)
 
 	commands, err := commandRepo.CommandFindAll()
@@ -77,7 +74,7 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, commandRepo, chatChannel, alertChannel, alertRepo)
+	chat, err := chat.NewChat(env, commandRepo, alertRepo, eventHandler)
 
 	_ = auth.NewTwitchAuth(env, r, func() {
 		saveTwitchSession(env.TwitchSession)
