@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue';
 import Keller_bot from 'src/service/keller_bot';
 import EventSourceStream from '@server-sent-stream/web';
-import { KellerBotAlert, KellerBotAlertType } from 'src/models/keller_bot_alert';
+import type { ApiKellerBotAlert } from 'src/models/keller_bot_alert';
+import { KellerBotAlertType,  KellerBotAlert } from 'src/models/keller_bot_alert';
 
 const videoSource = ref<string>();
 const gifSource = ref<string>();
@@ -13,8 +14,8 @@ function playSound(alert: KellerBotAlert) {
   const audio = new Audio(`http://localhost:8080/alert/${alert.ID}`)
   audio.play().then(() => {
     console.log('played');
-  }).catch(() => {
-    //TODO: fill
+  }).catch((err) => {
+    console.log('playing: ', err);
   })
 }
 
@@ -26,7 +27,13 @@ function playGif(alert: KellerBotAlert) {
 }
 
 function incomingAlert(alert: KellerBotAlert) {
+  console.log(`processing alert: ${alert.Name} -> ${alert.Type}`)
   switch (alert.Type) {
+    case KellerBotAlertType.Composition:
+      alert.composition.Alerts.forEach((childAlert) => {
+        incomingAlert(KellerBotAlert.fromApi(childAlert));
+      })
+      break;
     case KellerBotAlertType.Sound:
       playSound(alert)
       break;
@@ -49,11 +56,14 @@ function getStream() {
     while (true) {
       const { done, value } = await reader.read();
 
-      const alert = KellerBotAlert.fromApi(JSON.parse(value!.data));
+      const alerts = (JSON.parse(value!.data) as ApiKellerBotAlert[]).map(s => KellerBotAlert.fromApi(s));
 
       if (done) break;
-      incomingAlert(alert);
+      alerts.forEach(s => {
+        incomingAlert(s);
+      })
     }
+    console.log('finish')
   } ).catch(() => {
     //TODO: fill
   })
@@ -64,8 +74,8 @@ onMounted(() => {
 })
 </script>
 <template>
-  <img v-if="gifSource" class="full-height full-width"  fit="fill" :src="gifSource" alt="gif"/>
-  <video v-if="videoSource" :src="videoSource"/>
+  <img v-if="gifSource" class="full-height full-width" fit="fill" :src="gifSource" alt="gif" />
+  <video v-if="videoSource" :src="videoSource" />
 </template>
 
 <style scoped></style>

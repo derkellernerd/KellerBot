@@ -6,7 +6,7 @@ import type {
 } from 'src/models/keller_bot_command.ts'
 import { api } from 'boot/axios';
 import type { ApiKellerBotChatEvent } from 'src/models/keller_bot_event';
-import type { ApiKellerBotAlert } from 'src/models/keller_bot_alert';
+import type { ApiKellerBotAlert, ApiKellerBotAlertCreateRequest } from 'src/models/keller_bot_alert';
 
 class KellerBot {
   getCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand[]>>> {
@@ -46,7 +46,7 @@ class KellerBot {
     return api.get('/api/v1/alert')
   }
 
-  createAlert(alert: ApiKellerBotAlert):Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
+  createAlert(alert: ApiKellerBotAlertCreateRequest):Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
     return api.post('/api/v1/alert', alert)
   }
 

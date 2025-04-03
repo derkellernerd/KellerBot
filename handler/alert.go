@@ -48,6 +48,10 @@ func (h *Alert) AlertCreate(c *gin.Context) {
 		Type: alertCreateRequest.Type,
 	}
 
+	if alertCreateRequest.Data != nil {
+		alert.SetData(alertCreateRequest.Data)
+	}
+
 	err = h.alertRepo.AlertInsert(&alert)
 
 	c.JSON(http.StatusCreated, NewSuccessResponse(alert))
@@ -125,7 +129,7 @@ func (h *Alert) AlertGetFile(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, NewErrorResponse(err))
 			return
 		}
-		filePath = fmt.Sprintf("./data/alerts/%s", alertSound.SoundPath)
+		filePath = alertSound.SoundPath
 	case model.ALERT_TYPE_VIDEO:
 		alertVideo, err := alert.GetDataVideo()
 		if err != nil {

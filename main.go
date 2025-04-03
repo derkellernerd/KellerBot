@@ -104,14 +104,12 @@ func main() {
 
 		event := apiV1.Group("event")
 		{
+			event.GET("status", eventHandler.Status)
 			event.POST("chat", eventHandler.ChatEventTest)
 			event.POST("alert", eventHandler.AlertEventTest)
 
-			event.Use(middleware.HeaderStreaming())
-			{
-				event.GET("chat", eventHandler.ChatEventHandler)
-				event.GET("alert", eventHandler.AlertEventHandler)
-			}
+			event.GET("chat", middleware.HeadersMiddleware(), eventHandler.ChatEventHandler)
+			event.GET("alert", middleware.HeadersMiddleware(), eventHandler.AlertEventHandler)
 		}
 
 		alert := apiV1.Group("alert")

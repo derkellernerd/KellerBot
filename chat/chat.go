@@ -198,7 +198,26 @@ func (c *Chat) Start() error {
 
 				go func() {
 					log.Printf("Sending alert %s", alert.Name)
-					c.eventHandler.SendAlertEvent(&alert)
+					alerts := []model.Alert{}
+
+					if alert.Type == model.ALERT_TYPE_COMPOSITION {
+						alertComposition, err := alert.GetDataComposition()
+						if err != nil {
+							log.Println(err)
+						}
+
+						for _, alertName := range alertComposition.AlertNames {
+							childAlert, err := c.alertRepo.AlertFindByName(alertName)
+							if err != nil {
+								log.Println(err)
+							}
+
+							alerts = append(alerts, childAlert)
+						}
+					} else {
+						alerts = append(alerts, alert)
+					}
+					c.eventHandler.SendAlertEvent(alerts)
 				}()
 			}
 

@@ -7,10 +7,11 @@ import (
 )
 
 const (
-	ALERT_TYPE_SOUND     AlertType = "SOUND"
-	ALERT_TYPE_VIDEO     AlertType = "VIDEO"
-	ALERT_TYPE_GIF_SOUND AlertType = "GIF_SOUND"
-	ALERT_TYPE_GIF       AlertType = "GIF"
+	ALERT_TYPE_SOUND       AlertType = "SOUND"
+	ALERT_TYPE_VIDEO       AlertType = "VIDEO"
+	ALERT_TYPE_GIF_SOUND   AlertType = "GIF_SOUND"
+	ALERT_TYPE_GIF         AlertType = "GIF"
+	ALERT_TYPE_COMPOSITION AlertType = "COMPOSITION"
 )
 
 type AlertType string
@@ -35,6 +36,16 @@ func (a *Alert) SetData(data any) error {
 
 	a.Data = datatypes.JSON(jsonBytes)
 	return nil
+}
+
+func (c *Alert) GetDataComposition() (*AlertTypeComposition, error) {
+	var sound AlertTypeComposition
+	jsonBytes, err := c.Data.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(jsonBytes, &sound)
+	return &sound, err
 }
 
 func (c *Alert) GetDataSound() (*AlertTypeSound, error) {
@@ -94,7 +105,12 @@ type AlertTypeGif struct {
 	GifPath string
 }
 
+type AlertTypeComposition struct {
+	AlertNames []string
+}
+
 type AlertCreateRequest struct {
 	Name string    `binding:"required"`
 	Type AlertType `binding:"required"`
+	Data any
 }
