@@ -8,7 +8,8 @@ const routes: RouteRecordRaw[] = [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { name: 'CommandOverview', path: 'command', component: () => import('pages/CommandsOverviewPage.vue') },
       { name: 'AlertOverview', path: 'alert', component: () => import('pages/AlertOverviewPage.vue') },
-      { name: 'Event', path: 'event', component: () => import('pages/EventPage.vue') }
+      { name: 'Event', path: 'event', component: () => import('pages/EventPage.vue') },
+      { name: 'TwitchEvent', path: 'event/twitch', component: () => import('pages/TwitchEventOverviewPage.vue')}
     ],
   },
   {

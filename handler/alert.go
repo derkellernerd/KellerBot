@@ -130,6 +130,7 @@ func (h *Alert) AlertGetFile(c *gin.Context) {
 			return
 		}
 		filePath = alertSound.SoundPath
+		break
 	case model.ALERT_TYPE_VIDEO:
 		alertVideo, err := alert.GetDataVideo()
 		if err != nil {
@@ -137,6 +138,7 @@ func (h *Alert) AlertGetFile(c *gin.Context) {
 			return
 		}
 		filePath = fmt.Sprintf("./data/alerts/%s", alertVideo.VideoPath)
+		break
 	case model.ALERT_TYPE_GIF:
 		alertGif, err := alert.GetDataGif()
 		if err != nil {

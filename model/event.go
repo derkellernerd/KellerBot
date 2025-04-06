@@ -1,6 +1,8 @@
 package model
 
-import "github.com/goccy/go-json"
+import (
+	"github.com/goccy/go-json"
+)
 
 type ChatEvent struct {
 	User    string `binding:"required"`

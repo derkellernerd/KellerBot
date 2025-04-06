@@ -7,6 +7,7 @@ import type {
 import { api } from 'boot/axios';
 import type { ApiKellerBotChatEvent } from 'src/models/keller_bot_event';
 import type { ApiKellerBotAlert, ApiKellerBotAlertCreateRequest } from 'src/models/keller_bot_alert';
+import type { ApiKellerBotTwitchEvent } from 'src/models/keller_bot_twitch_event';
 
 class KellerBot {
   getCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand[]>>> {
@@ -14,8 +15,15 @@ class KellerBot {
   }
 
   createCommand(commandCreateRequest: ApiKellerBotCommandCreateRequest) : Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand>>> {
-    console.log('creating')
     return api.post('/api/v1/command', commandCreateRequest);
+  }
+
+  getTwitchEvents():Promise<AxiosResponse<BaseResponse<ApiKellerBotTwitchEvent[]>>> {
+    return api.get('/api/v1/event/twitch')
+  }
+
+  createTwitchEvent(twitchEventCreateRequest: ApiKellerBotTwitchEvent) : Promise<AxiosResponse<BaseResponse<ApiKellerBotTwitchEvent>>> {
+    return api.post('/api/v1/event/twitch', twitchEventCreateRequest);
   }
 
   getChatStream() : Promise<AxiosResponse> {

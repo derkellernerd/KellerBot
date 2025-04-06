@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	scopes       = []string{"user:read:chat", "user:bot", "user:write:chat"}
+	scopes       = []string{"user:read:chat", "user:bot", "user:write:chat", "moderator:read:followers"}
 	redirectURL  = "http://localhost:8080/redirect"
 	oauth2Config *oauth2.Config
 	cookieSecret = []byte("verysensible")

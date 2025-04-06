@@ -45,9 +45,16 @@ func main() {
 		panic(err)
 	}
 
+	twitchEventRepo := repository.NewTwitchEvent(env)
+	err = twitchEventRepo.Migrate()
+	if err != nil {
+		panic(err)
+	}
+
 	commandHandler := handler.NewCommand(env, commandRepo)
 	eventHandler := handler.NewEvent(env, alertRepo)
 	alertHandler := handler.NewAlert(env, alertRepo)
+	twitchEventHandler := handler.NewTwitchEvent(env, twitchEventRepo)
 
 	commands, err := commandRepo.CommandFindAll()
 
@@ -104,6 +111,15 @@ func main() {
 
 		event := apiV1.Group("event")
 		{
+
+			twitch := event.Group("twitch")
+			{
+				twitch.GET("", twitchEventHandler.TwitchEventGetAll)
+				twitch.POST("", twitchEventHandler.TwitchEventCreate)
+				twitch.PUT(":twitchEventId", twitchEventHandler.TwitchEventUpdate)
+				twitch.DELETE(":twitchEventId", twitchEventHandler.TwitchEventDelete)
+			}
+
 			event.GET("status", eventHandler.Status)
 			event.POST("chat", eventHandler.ChatEventTest)
 			event.POST("alert", eventHandler.AlertEventTest)
@@ -120,7 +136,7 @@ func main() {
 		}
 	}
 
-	r.GET("alert/:alertId", alertHandler.AlertGetFile)
+	r.GET("alert/:alertId", middleware.HeadersNoCache(), alertHandler.AlertGetFile)
 
 	r.Run()
 }

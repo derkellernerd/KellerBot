@@ -7,16 +7,13 @@ import { KellerBotAlertType,  KellerBotAlert } from 'src/models/keller_bot_alert
 
 const videoSource = ref<string>();
 const gifSource = ref<string>();
-
+const audioSource = ref<string>();
 
 function playSound(alert: KellerBotAlert) {
-  console.log('playing sound');
-  const audio = new Audio(`http://localhost:8080/alert/${alert.ID}`)
-  audio.play().then(() => {
-    console.log('played');
-  }).catch((err) => {
-    console.log('playing: ', err);
-  })
+  audioSource.value = `http://localhost:8080/alert/${alert.ID}`
+  setTimeout(function() {
+    audioSource.value = undefined;
+  }, 2000)
 }
 
 function playGif(alert: KellerBotAlert) {
@@ -76,6 +73,9 @@ onMounted(() => {
 <template>
   <img v-if="gifSource" class="full-height full-width" fit="fill" :src="gifSource" alt="gif" />
   <video v-if="videoSource" :src="videoSource" />
+  <audio v-if="audioSource" :src="audioSource" autoplay></audio>
 </template>
 
 <style scoped></style>
+
+

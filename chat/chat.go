@@ -88,6 +88,7 @@ func (c *Chat) Start() error {
 
 		events := []twitch.EventSubscription{
 			twitch.SubChannelChatMessage,
+			twitch.SubChannelFollow,
 		}
 
 		for _, event := range events {
@@ -100,6 +101,7 @@ func (c *Chat) Start() error {
 				Condition: map[string]string{
 					"broadcaster_user_id": c.env.Twitch.UserId,
 					"user_id":             c.env.Twitch.UserId,
+					"moderator_user_id":   c.env.Twitch.UserId,
 				},
 			})
 			if err != nil {
@@ -107,6 +109,36 @@ func (c *Chat) Start() error {
 				return
 			}
 		}
+	})
+	c.client.OnEventChannelFollow(func(follow twitch.EventChannelFollow) {
+		alert, err := c.alertRepo.AlertFindByName("minion_horn")
+		if err != nil {
+			log.Println(err)
+		}
+
+		go func() {
+			log.Printf("Sending alert %s", alert.Name)
+			alerts := []model.Alert{}
+
+			if alert.Type == model.ALERT_TYPE_COMPOSITION {
+				alertComposition, err := alert.GetDataComposition()
+				if err != nil {
+					log.Println(err)
+				}
+
+				for _, alertName := range alertComposition.AlertNames {
+					childAlert, err := c.alertRepo.AlertFindByName(alertName)
+					if err != nil {
+						log.Println(err)
+					}
+
+					alerts = append(alerts, childAlert)
+				}
+			} else {
+				alerts = append(alerts, alert)
+			}
+			c.eventHandler.SendAlertEvent(alerts)
+		}()
 	})
 	c.client.OnEventChannelChatMessage(func(message twitch.EventChannelChatMessage) {
 		chatEvent := model.ChatEvent{

@@ -45,6 +45,11 @@
             <q-item-label>Event</q-item-label>
           </q-item-section>
         </q-item>
+        <q-item clickable v-ripple :to="{name: 'TwitchEvent'}">
+          <q-item-section>
+            <q-item-label>Twitch Events</q-item-label>
+          </q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
