@@ -3,8 +3,8 @@ package repository
 import (
 	"errors"
 
-	"github.com/derkellernerd/dori/core"
-	"github.com/derkellernerd/dori/model"
+	"github.com/derkellernerd/kellerbot/core"
+	"github.com/derkellernerd/kellerbot/model"
 )
 
 type Command struct {

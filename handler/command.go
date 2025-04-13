@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/derkellernerd/dori/core"
-	"github.com/derkellernerd/dori/model"
-	"github.com/derkellernerd/dori/repository"
+	"github.com/derkellernerd/kellerbot/core"
+	"github.com/derkellernerd/kellerbot/model"
+	"github.com/derkellernerd/kellerbot/repository"
 	"github.com/gin-gonic/gin"
 )
 

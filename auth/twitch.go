@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/derkellernerd/dori/core"
+	"github.com/derkellernerd/kellerbot/core"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/sessions"
 	"golang.org/x/oauth2"

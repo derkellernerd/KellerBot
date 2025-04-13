@@ -1,4 +1,4 @@
-module github.com/derkellernerd/dori
+module github.com/derkellernerd/kellerbot
 
 go 1.23.6
 

@@ -5,11 +5,21 @@ export enum KellerBotAlertType {
   Video = 'VIDEO',
   Gif = 'GIF',
   GifSound = 'GIF_SOUND',
-  Composition = 'COMPOSITION'
+  Composition = 'COMPOSITION',
+  Text = 'TEXT',
+  Chat = 'CHAT',
 }
 
 export interface ApiKellerBotAlertTypeComposition {
   Alerts: ApiKellerBotAlert[];
+}
+
+export interface ApiKellerBotAlertTypeText {
+  Text: string;
+}
+
+export interface ApiKellerBotAlertTypeChat {
+  Chat: string;
 }
 
 export interface ApiKellerBotAlertTypeCompositionCreateRequest {
@@ -20,13 +30,14 @@ export interface ApiKellerBotAlert {
   ID: number;
   Name: string;
   Type: KellerBotAlertType;
-  Data: ApiKellerBotAlertTypeComposition|null;
+  Data: ApiKellerBotAlertTypeComposition|ApiKellerBotAlertTypeText|ApiKellerBotAlertTypeChat|null;
+  DurationInSeconds: number;
 }
 
 export interface ApiKellerBotAlertCreateRequest {
   Name: string;
   Type: KellerBotAlertType;
-  Data: ApiKellerBotAlertTypeCompositionCreateRequest|null;
+  Data: ApiKellerBotAlertTypeCompositionCreateRequest|ApiKellerBotAlertTypeText|ApiKellerBotAlertTypeChat|null;
 }
 
 export class KellerBotAlert extends autoImplement<ApiKellerBotAlert>() {
@@ -36,5 +47,13 @@ export class KellerBotAlert extends autoImplement<ApiKellerBotAlert>() {
 
   get composition() : ApiKellerBotAlertTypeComposition {
     return this.Data as ApiKellerBotAlertTypeComposition
+  }
+
+  get textAlert() : ApiKellerBotAlertTypeText {
+    return this.Data as ApiKellerBotAlertTypeText;
+  }
+
+  get duration() : number {
+    return this.DurationInSeconds > 0 ? this.DurationInSeconds * 1000 : 2000;
   }
 }

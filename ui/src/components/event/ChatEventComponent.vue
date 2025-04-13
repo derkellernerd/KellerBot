@@ -27,6 +27,8 @@ function getStream() {
     }
   } ).catch(() => {
     //TODO: fill
+  }).finally(() => {
+    getStream();
   })
 }
 

@@ -3,7 +3,7 @@ package core
 import (
 	"os"
 
-	"github.com/derkellernerd/dori/database"
+	"github.com/derkellernerd/kellerbot/database"
 )
 
 type Environment struct {

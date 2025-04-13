@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/derkellernerd/dori/helper"
+	"github.com/derkellernerd/kellerbot/helper"
 	"github.com/goccy/go-json"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"

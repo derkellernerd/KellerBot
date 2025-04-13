@@ -1,20 +1,17 @@
 package chat
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/derkellernerd/dori/core"
-	"github.com/derkellernerd/dori/handler"
-	"github.com/derkellernerd/dori/model"
-	"github.com/derkellernerd/dori/repository"
+	"github.com/derkellernerd/kellerbot/core"
+	"github.com/derkellernerd/kellerbot/handler"
+	"github.com/derkellernerd/kellerbot/model"
+	"github.com/derkellernerd/kellerbot/repository"
+	twitchClient "github.com/derkellernerd/kellerbot/twitch"
 	"github.com/joeyak/go-twitch-eventsub/v3"
 )
 
@@ -24,59 +21,7 @@ type Chat struct {
 	commandRepo  *repository.Command
 	alertRepo    *repository.Alert
 	eventHandler *handler.Event
-}
-
-type TwitchChatMessage struct {
-	BroadcasterId   string `json:"broadcaster_id"`
-	SenderId        string `json:"sender_id"`
-	Message         string `json:"message"`
-	ParentMessageId string `json:"reply_parent_message_id"`
-}
-
-func (c *Chat) httpApiRequest(endpoint string, payload any) error {
-	uri := fmt.Sprintf("https://api.twitch.tv/helix/%s", endpoint)
-
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewReader(payloadBytes))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Client-Id", c.env.Twitch.ClientId)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.env.TwitchSession.AccessToken))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Println("response Body:", string(body))
-
-	return nil
-}
-
-func (c *Chat) SendChatAnswer(messageId string, message string, a ...any) error {
-	payload := TwitchChatMessage{
-		BroadcasterId: c.env.Twitch.UserId,
-		SenderId:      c.env.Twitch.UserId,
-		Message:       fmt.Sprintf(message, a...),
-	}
-
-	if messageId != "" {
-		payload.ParentMessageId = messageId
-	}
-
-	return c.httpApiRequest("chat/messages", &payload)
-}
-
-func (c *Chat) SendChatMessage(message string, a ...any) error {
-	return c.SendChatAnswer("", message, a...)
+	twitchEvent  *repository.TwitchEvent
 }
 
 func (c *Chat) Start() error {
@@ -89,6 +34,7 @@ func (c *Chat) Start() error {
 		events := []twitch.EventSubscription{
 			twitch.SubChannelChatMessage,
 			twitch.SubChannelFollow,
+			twitch.SubChannelRaid,
 		}
 
 		for _, event := range events {
@@ -99,9 +45,10 @@ func (c *Chat) Start() error {
 				AccessToken: c.env.TwitchSession.AccessToken,
 				Event:       event,
 				Condition: map[string]string{
-					"broadcaster_user_id": c.env.Twitch.UserId,
-					"user_id":             c.env.Twitch.UserId,
-					"moderator_user_id":   c.env.Twitch.UserId,
+					"broadcaster_user_id":    c.env.Twitch.UserId,
+					"user_id":                c.env.Twitch.UserId,
+					"moderator_user_id":      c.env.Twitch.UserId,
+					"to_broadcaster_user_id": c.env.Twitch.UserId,
 				},
 			})
 			if err != nil {
@@ -110,32 +57,59 @@ func (c *Chat) Start() error {
 			}
 		}
 	})
-	c.client.OnEventChannelFollow(func(follow twitch.EventChannelFollow) {
-		alert, err := c.alertRepo.AlertFindByName("minion_horn")
+	c.client.OnEventChannelRaid(func(raid twitch.EventChannelRaid) {
+		event, err := c.twitchEvent.TwitchEventFindByTwitchEventSubscripton(string(twitch.SubChannelRaid))
+		if err != nil {
+			if err == repository.ErrTwitchEventNotFound {
+				return
+			}
+			log.Println(err)
+		}
+
+		alert, err := c.alertRepo.AlertFindByName(event.AlertName)
 		if err != nil {
 			log.Println(err)
 		}
 
+		payload := map[string]any{
+			"from_broadcaster_user_name": raid.FromBroadcasterUserName,
+			"viewers":                    raid.Viewers,
+		}
+
 		go func() {
 			log.Printf("Sending alert %s", alert.Name)
-			alerts := []model.Alert{}
+			alerts, err := handler.GetAlertFinal(c.env, c.alertRepo, &alert, payload, 0)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			c.eventHandler.SendAlertEvent(alerts)
+		}()
+	})
+	c.client.OnEventChannelFollow(func(follow twitch.EventChannelFollow) {
+		event, err := c.twitchEvent.TwitchEventFindByTwitchEventSubscripton(string(twitch.SubChannelFollow))
+		if err != nil {
+			if err == repository.ErrTwitchEventNotFound {
+				return
+			}
+			log.Println(err)
+		}
 
-			if alert.Type == model.ALERT_TYPE_COMPOSITION {
-				alertComposition, err := alert.GetDataComposition()
-				if err != nil {
-					log.Println(err)
-				}
+		alert, err := c.alertRepo.AlertFindByName(event.AlertName)
+		if err != nil {
+			log.Println(err)
+		}
 
-				for _, alertName := range alertComposition.AlertNames {
-					childAlert, err := c.alertRepo.AlertFindByName(alertName)
-					if err != nil {
-						log.Println(err)
-					}
+		payload := map[string]any{
+			"user_name": follow.UserName,
+		}
 
-					alerts = append(alerts, childAlert)
-				}
-			} else {
-				alerts = append(alerts, alert)
+		go func() {
+			log.Printf("Sending alert %s", alert.Name)
+			alerts, err := handler.GetAlertFinal(c.env, c.alertRepo, &alert, payload, 0)
+			if err != nil {
+				log.Println(err)
+				return
 			}
 			c.eventHandler.SendAlertEvent(alerts)
 		}()
@@ -167,7 +141,7 @@ func (c *Chat) Start() error {
 					result = fmt.Sprintf("%s !%s", result, cmd.Command)
 				}
 
-				c.SendChatMessage(fmt.Sprintf("commands available: %s", result))
+				twitchClient.SendChatMessage(c.env, fmt.Sprintf("commands available: %s", result))
 				return
 			}
 
@@ -179,7 +153,7 @@ func (c *Chat) Start() error {
 			durationBetweenExecutions := time.Now().Sub(cmd.LastUsed).Seconds()
 			log.Printf("Last used: %f seconds", durationBetweenExecutions)
 			if cmd.TimeoutInSeconds > 0 && durationBetweenExecutions < float64(cmd.TimeoutInSeconds) {
-				c.SendChatAnswer(message.MessageId, "Command noch %d Sekunden nicht verfuegbar", cmd.TimeoutInSeconds-uint64(durationBetweenExecutions))
+				twitchClient.SendChatAnswer(c.env, message.MessageId, "Command noch %d Sekunden nicht verfuegbar", cmd.TimeoutInSeconds-uint64(durationBetweenExecutions))
 				return
 			}
 
@@ -192,7 +166,7 @@ func (c *Chat) Start() error {
 				if err != nil {
 					log.Println(err)
 				}
-				c.SendChatMessage(message.Message)
+				twitchClient.SendChatMessage(c.env, message.Message)
 				break
 			case model.COMMAND_TYPE_HTTP_ACTION:
 				httpAction, err := cmd.GetDataActionHttp()
@@ -212,10 +186,10 @@ func (c *Chat) Start() error {
 
 				err = httpAction.Do(numberArgs...)
 				if err != nil {
-					c.SendChatAnswer(message.MessageId, "SirSad: %s", err)
+					twitchClient.SendChatAnswer(c.env, message.MessageId, "SirSad: %s", err)
 					return
 				}
-				c.SendChatAnswer(message.MessageId, "ICH MACH LICHT!")
+				twitchClient.SendChatAnswer(c.env, message.MessageId, "ICH MACH LICHT!")
 				break
 			case model.COMMAND_TYPE_ALERT_ACTION:
 				alertAction, err := cmd.GetDataActionAlert()
@@ -230,24 +204,10 @@ func (c *Chat) Start() error {
 
 				go func() {
 					log.Printf("Sending alert %s", alert.Name)
-					alerts := []model.Alert{}
-
-					if alert.Type == model.ALERT_TYPE_COMPOSITION {
-						alertComposition, err := alert.GetDataComposition()
-						if err != nil {
-							log.Println(err)
-						}
-
-						for _, alertName := range alertComposition.AlertNames {
-							childAlert, err := c.alertRepo.AlertFindByName(alertName)
-							if err != nil {
-								log.Println(err)
-							}
-
-							alerts = append(alerts, childAlert)
-						}
-					} else {
-						alerts = append(alerts, alert)
+					alerts, err := handler.GetAlertFinal(c.env, c.alertRepo, &alert, make(map[string]any), 0)
+					if err != nil {
+						log.Println(err)
+						return
 					}
 					c.eventHandler.SendAlertEvent(alerts)
 				}()
@@ -271,7 +231,7 @@ func (c *Chat) Start() error {
 	return err
 }
 
-func NewChat(env *core.Environment, commandRepo *repository.Command, alertRepo *repository.Alert, eventHandler *handler.Event) (*Chat, error) {
+func NewChat(env *core.Environment, commandRepo *repository.Command, alertRepo *repository.Alert, eventHandler *handler.Event, twitchEventRepo *repository.TwitchEvent) (*Chat, error) {
 	client := twitch.NewClient()
 
 	return &Chat{
@@ -280,5 +240,6 @@ func NewChat(env *core.Environment, commandRepo *repository.Command, alertRepo *
 		commandRepo:  commandRepo,
 		alertRepo:    alertRepo,
 		eventHandler: eventHandler,
+		twitchEvent:  twitchEventRepo,
 	}, nil
 }

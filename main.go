@@ -7,14 +7,14 @@ import (
 	"os"
 	"slices"
 
-	"github.com/derkellernerd/dori/auth"
-	"github.com/derkellernerd/dori/chat"
-	"github.com/derkellernerd/dori/core"
-	"github.com/derkellernerd/dori/database"
-	"github.com/derkellernerd/dori/handler"
-	"github.com/derkellernerd/dori/middleware"
-	"github.com/derkellernerd/dori/model"
-	"github.com/derkellernerd/dori/repository"
+	"github.com/derkellernerd/kellerbot/auth"
+	"github.com/derkellernerd/kellerbot/chat"
+	"github.com/derkellernerd/kellerbot/core"
+	"github.com/derkellernerd/kellerbot/database"
+	"github.com/derkellernerd/kellerbot/handler"
+	"github.com/derkellernerd/kellerbot/middleware"
+	"github.com/derkellernerd/kellerbot/model"
+	"github.com/derkellernerd/kellerbot/repository"
 	"github.com/gin-gonic/gin"
 )
 
@@ -81,7 +81,7 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, commandRepo, alertRepo, eventHandler)
+	chat, err := chat.NewChat(env, commandRepo, alertRepo, eventHandler, twitchEventRepo)
 
 	_ = auth.NewTwitchAuth(env, r, func() {
 		saveTwitchSession(env.TwitchSession)

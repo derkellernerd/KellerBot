@@ -18,15 +18,21 @@ func (c *ChatEvent) ToJson() (string, error) {
 	return string(bytes), nil
 }
 
-type AlertEvent struct {
-	Name string `binding:"required"`
+type AlertEventRequest struct {
+	Name    string `binding:"required"`
+	Payload map[string]any
 }
 
-func (a *AlertEvent) ToJson() (string, error) {
+func (a *AlertEventRequest) ToJson() (string, error) {
 	bytes, err := json.Marshal(a)
 	if err != nil {
 		return "", nil
 	}
 
 	return string(bytes), nil
+}
+
+type AlertEvent struct {
+	Alerts  Alert
+	Payload map[string]any
 }
