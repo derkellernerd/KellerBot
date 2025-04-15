@@ -30,14 +30,14 @@
         >
           Menu
         </q-item-label>
-        <q-item clickable v-ripple :to="{name: 'CommandOverview'}">
+        <q-item clickable v-ripple :to="{name: 'ChatCommandOverview'}">
           <q-item-section>
             <q-item-label>Command</q-item-label>
           </q-item-section>
         </q-item>
-        <q-item clickable v-ripple :to="{name: 'AlertOverview'}">
+        <q-item clickable v-ripple :to="{name: 'ActionOverview'}">
           <q-item-section>
-            <q-item-label>Alert</q-item-label>
+            <q-item-label>Actions</q-item-label>
           </q-item-section>
         </q-item>
         <q-item clickable v-ripple :to="{name: 'Event'}">

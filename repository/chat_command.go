@@ -7,24 +7,24 @@ import (
 	"github.com/derkellernerd/kellerbot/model"
 )
 
-type Action struct {
+type ChatCommand struct {
 	env *core.Environment
 }
 
-func NewAction(env *core.Environment) *Action {
-	return &Action{
+func NewChatCommand(env *core.Environment) *ChatCommand {
+	return &ChatCommand{
 		env: env,
 	}
 }
 
-func (r Action) Migrate() error {
+func (r ChatCommand) Migrate() error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	err = db.AutoMigrate(&model.Action{})
+	err = db.AutoMigrate(&model.ChatCommand{})
 	if err != nil {
 		return err
 	}
@@ -32,10 +32,10 @@ func (r Action) Migrate() error {
 	return nil
 }
 
-var ErrActionNotFound = errors.New("Action not found")
+var ErrChatCommandNotFound = errors.New("ChatCommand not found")
 
-func (r Action) ActionFindAll() ([]model.Action, error) {
-	var items []model.Action
+func (r ChatCommand) ChatCommandFindAll() ([]model.ChatCommand, error) {
+	var items []model.ChatCommand
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return items, err
@@ -49,26 +49,26 @@ func (r Action) ActionFindAll() ([]model.Action, error) {
 	return items, result.Error
 }
 
-func (r Action) ActionFindById(id uint) (model.Action, error) {
+func (r ChatCommand) ChatCommandFindById(id uint) (model.ChatCommand, error) {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
-		return model.Action{}, err
+		return model.ChatCommand{}, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	var item model.Action
+	var item model.ChatCommand
 	result := db.Find(&item, "id = ?", id)
 	if result.Error != nil {
-		return model.Action{}, result.Error
+		return model.ChatCommand{}, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		return model.Action{}, ErrActionNotFound
+		return model.ChatCommand{}, ErrChatCommandNotFound
 	}
 	return item, result.Error
 }
 
-func (r Action) ActionInsert(item *model.Action) error {
+func (r ChatCommand) ChatCommandInsert(item *model.ChatCommand) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (r Action) ActionInsert(item *model.Action) error {
 	return result.Error
 }
 
-func (r Action) ActionUpdate(item *model.Action) error {
+func (r ChatCommand) ChatCommandUpdate(item *model.ChatCommand) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (r Action) ActionUpdate(item *model.Action) error {
 	return result.Error
 }
 
-func (r Action) ActionDelete(item *model.Action) error {
+func (r ChatCommand) ChatCommandDelete(item *model.ChatCommand) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -101,21 +101,21 @@ func (r Action) ActionDelete(item *model.Action) error {
 	return result.Error
 }
 
-func (r Action) ActionFindByActionName(actionName string) (model.Action, error) {
+func (r ChatCommand) ChatCommandFindByChatCommand(chatCommand string) (model.ChatCommand, error) {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
-		return model.Action{}, err
+		return model.ChatCommand{}, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	var item model.Action
-	result := db.Find(&item, "action_name = ?", actionName)
+	var item model.ChatCommand
+	result := db.Find(&item, "command = ?", chatCommand)
 	if result.Error != nil {
-		return model.Action{}, result.Error
+		return model.ChatCommand{}, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		return model.Action{}, ErrActionNotFound
+		return model.ChatCommand{}, ErrChatCommandNotFound
 	}
 	return item, result.Error
 }

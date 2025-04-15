@@ -13,4 +13,5 @@ CLOSED: [2025-03-19 Wed 22:38]
 ** CLI Client
 ** DeviceCode supporten
 ** Chatbox
-
+** Alerts
+*** Bird is the Word - mit Family Guy Gif

@@ -1,8 +1,9 @@
 import { autoImplement } from 'src/helper/functions';
 
 export interface ApiKellerBotTwitchEvent {
+  ID: number;
   TwitchEventSubscription: string;
-  AlertName: string;
+  ActionName: string;
 }
 
 export class KellerBotTwitchEvent extends autoImplement<ApiKellerBotTwitchEvent>() {

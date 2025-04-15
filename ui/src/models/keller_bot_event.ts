@@ -10,3 +10,17 @@ export class KellerBotChatEvent extends autoImplement<ApiKellerBotChatEvent>() {
     return new KellerBotChatEvent(item);
   }
 }
+
+export interface ApiKellerBotEvent {
+  ID: number;
+  CreatedAt: Date;
+  EventName: string;
+  ExecutedActionName: string;
+  Source: string;
+}
+
+export class KellerBotEvent extends autoImplement<ApiKellerBotEvent>() {
+  static fromApi(item: ApiKellerBotEvent) : KellerBotEvent {
+    return new KellerBotEvent(item);
+  }
+}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"os"
-	"slices"
 
 	"github.com/derkellernerd/kellerbot/auth"
 	"github.com/derkellernerd/kellerbot/chat"
@@ -13,8 +12,8 @@ import (
 	"github.com/derkellernerd/kellerbot/database"
 	"github.com/derkellernerd/kellerbot/handler"
 	"github.com/derkellernerd/kellerbot/middleware"
-	"github.com/derkellernerd/kellerbot/model"
 	"github.com/derkellernerd/kellerbot/repository"
+	"github.com/derkellernerd/kellerbot/worker"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,14 +32,8 @@ func main() {
 	env := core.NewEnvironment(twitchSession)
 	env.DatabaseManager = databaseManager
 
-	commandRepo := repository.NewCommand(env)
-	err = commandRepo.Migrate()
-	if err != nil {
-		panic(err)
-	}
-
-	alertRepo := repository.NewAlert(env)
-	err = alertRepo.Migrate()
+	actionRepo := repository.NewAction(env)
+	err = actionRepo.Migrate()
 	if err != nil {
 		panic(err)
 	}
@@ -51,37 +44,28 @@ func main() {
 		panic(err)
 	}
 
-	commandHandler := handler.NewCommand(env, commandRepo)
-	eventHandler := handler.NewEvent(env, alertRepo)
-	alertHandler := handler.NewAlert(env, alertRepo)
-	twitchEventHandler := handler.NewTwitchEvent(env, twitchEventRepo)
-
-	commands, err := commandRepo.CommandFindAll()
-
-	wantedCommands := []model.Command{
-		model.NewCommandMessage("ping", "pong"),
-		model.NewCommandMessage("stats", "https://twitchtrends.tv/c/DerKellerNerd"),
-		model.NewCommandMessage("futev", "https://futev.de"),
+	chatCommandRepo := repository.NewChatCommand(env)
+	err = chatCommandRepo.Migrate()
+	if err != nil {
+		panic(err)
 	}
 
-	for _, command := range wantedCommands {
-		exists := slices.ContainsFunc(commands, func(n model.Command) bool {
-			return n.Command == command.Command
-		})
-
-		if !exists {
-			err := commandRepo.CommandInsert(&command)
-			if err != nil {
-				panic(err)
-			}
-			log.Printf("Command created: %s", command.Command)
-		}
+	eventRepo := repository.NewEvent(env)
+	err = eventRepo.Migrate()
+	if err != nil {
+		panic(err)
 	}
+
+	actionWorker := worker.NewAction(env, actionRepo)
+	actionHandler := handler.NewAction(env, actionRepo)
+	twitchEventHandler := handler.NewTwitchEvent(env, twitchEventRepo, actionWorker)
+	chatCommandHandler := handler.NewChatCommand(env, chatCommandRepo, actionWorker)
+	eventHandler := handler.NewEvent(env, actionWorker, eventRepo)
 
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, commandRepo, alertRepo, eventHandler, twitchEventRepo)
+	chat, err := chat.NewChat(env, twitchEventRepo, chatCommandRepo, actionWorker, eventRepo)
 
 	_ = auth.NewTwitchAuth(env, r, func() {
 		saveTwitchSession(env.TwitchSession)
@@ -101,16 +85,10 @@ func main() {
 
 	apiV1 := r.Group("api/v1")
 	{
-		command := apiV1.Group("command")
-		{
-			command.GET("", commandHandler.CommandGetAll)
-			command.POST("", commandHandler.CommandCreate)
-			command.PUT(":commandId", commandHandler.CommandUpdate)
-			command.DELETE(":commandId", commandHandler.CommandDelete)
-		}
-
 		event := apiV1.Group("event")
 		{
+			event.GET("", eventHandler.EventGetAll)
+			event.POST(":eventId/action/replay", eventHandler.EventActionReplay)
 
 			twitch := event.Group("twitch")
 			{
@@ -118,25 +96,33 @@ func main() {
 				twitch.POST("", twitchEventHandler.TwitchEventCreate)
 				twitch.PUT(":twitchEventId", twitchEventHandler.TwitchEventUpdate)
 				twitch.DELETE(":twitchEventId", twitchEventHandler.TwitchEventDelete)
+				twitch.POST(":twitchEventId/action/test", twitchEventHandler.TwitchEventTest)
 			}
 
-			event.GET("status", eventHandler.Status)
-			event.POST("chat", eventHandler.ChatEventTest)
-			event.POST("alert", eventHandler.AlertEventTest)
-
-			event.GET("chat", middleware.HeadersMiddleware(), eventHandler.ChatEventHandler)
 			event.GET("alert", middleware.HeadersMiddleware(), eventHandler.AlertEventHandler)
 		}
 
-		alert := apiV1.Group("alert")
+		action := apiV1.Group("action")
 		{
-			alert.GET("", alertHandler.AlertGetAll)
-			alert.POST("", alertHandler.AlertCreate)
-			alert.POST(":alertId/upload", alertHandler.AlertUploadFile)
+			action.GET("", actionHandler.ActionGetAll)
+			action.GET(":actionId", actionHandler.ActionGetById)
+			action.POST("", actionHandler.ActionCreate)
+			action.PUT(":actionId", actionHandler.ActionUpdate)
+			action.POST(":actionId/upload", actionHandler.ActionUploadFile)
+			action.DELETE(":actionId", actionHandler.ActionDelete)
+		}
+
+		chatCommand := apiV1.Group("chat_command")
+		{
+			chatCommand.GET("", chatCommandHandler.ChatCommandGetAll)
+			chatCommand.POST("", chatCommandHandler.ChatCommandCreate)
+			chatCommand.POST(":chatCommandId/action/test", chatCommandHandler.ChatCommandTest)
+			chatCommand.PUT(":chatCommandId", chatCommandHandler.ChatCommandUpdate)
+			chatCommand.DELETE(":chatCommandId", chatCommandHandler.ChatCommandDelete)
 		}
 	}
 
-	r.GET("alert/:alertId", middleware.HeadersNoCache(), alertHandler.AlertGetFile)
+	r.GET("action/:actionId", middleware.HeadersNoCache(), actionHandler.ActionGetFile)
 
 	r.Run()
 }
