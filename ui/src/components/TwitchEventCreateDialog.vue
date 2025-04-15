@@ -2,17 +2,17 @@
 import type { ApiKellerBotTwitchEvent } from 'src/models/keller_bot_twitch_event';
 import { ref } from 'vue';
 import Keller_bot from 'src/service/keller_bot';
-import { KellerBotAlert } from 'src/models/keller_bot_alert';
+import { KellerBotAction } from 'src/models/keller_bot_action';
 
 const show = defineModel({type: Boolean, default: false})
 const twitchEvent = ref<ApiKellerBotTwitchEvent>({} as ApiKellerBotTwitchEvent);
-const alerts = ref<KellerBotAlert[]>([]);
+const actions = ref<KellerBotAction[]>([]);
 
 function loadAlerts() {
-  Keller_bot.getAlerts()
+  Keller_bot.getActions()
     .then((result) => {
       if (result.status === 200) {
-        alerts.value = result.data.Data.map((s) => KellerBotAlert.fromApi(s));
+        actions.value = result.data.Data.map((s) => KellerBotAction.fromApi(s));
       }
     })
     .catch(() => {
@@ -45,13 +45,13 @@ function createTwitchEvent() {
         <q-card-section>
           <q-input v-model="twitchEvent.TwitchEventSubscription" label="Name" />
           <q-select
-            v-model="twitchEvent.AlertName"
+            v-model="twitchEvent.ActionName"
             label="Alert"
-            :options="alerts"
+            :options="actions"
             map-options
             emit-value
-            option-label="Name"
-            option-value="Name"
+            option-label="ActionName"
+            option-value="ActionName"
           />
         </q-card-section>
         <q-card-section>

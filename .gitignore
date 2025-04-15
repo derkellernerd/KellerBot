@@ -1,3 +1,4 @@
 test.db
 tmp/
 /data/
+/test.db.bak

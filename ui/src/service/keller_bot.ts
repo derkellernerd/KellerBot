@@ -1,21 +1,24 @@
 import type { AxiosResponse } from 'axios'
 import type { BaseResponse } from 'src/models/base_response.ts'
-import type {
-  ApiKellerBotCommand,
-  ApiKellerBotCommandCreateRequest
-} from 'src/models/keller_bot_command.ts'
 import { api } from 'boot/axios';
-import type { ApiKellerBotChatEvent } from 'src/models/keller_bot_event';
-import type { ApiKellerBotAlert, ApiKellerBotAlertCreateRequest } from 'src/models/keller_bot_alert';
+import type { ApiKellerBotChatEvent, ApiKellerBotEvent } from 'src/models/keller_bot_event';
 import type { ApiKellerBotTwitchEvent } from 'src/models/keller_bot_twitch_event';
+import type {
+  ApiKellerBotAction,
+} from 'src/models/keller_bot_action';
+import { type ApiKellerBotChatCommand } from 'src/models/keller_bot_chat_command';
 
 class KellerBot {
-  getCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand[]>>> {
-    return api.get('/api/v1/command')
+  getChatCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotChatCommand[]>>> {
+    return api.get('/api/v1/chat_command')
   }
 
-  createCommand(commandCreateRequest: ApiKellerBotCommandCreateRequest) : Promise<AxiosResponse<BaseResponse<ApiKellerBotCommand>>> {
-    return api.post('/api/v1/command', commandCreateRequest);
+  createChatCommand(chatCommand: ApiKellerBotChatCommand) : Promise<AxiosResponse<BaseResponse<ApiKellerBotChatCommand>>> {
+    return api.post('/api/v1/chat_command', chatCommand);
+  }
+
+  deleteChatCommand(chatCommandID: number) : Promise<AxiosResponse<never>> {
+    return api.delete(`/api/v1/chat_command/${chatCommandID}`)
   }
 
   getTwitchEvents():Promise<AxiosResponse<BaseResponse<ApiKellerBotTwitchEvent[]>>> {
@@ -24,6 +27,10 @@ class KellerBot {
 
   createTwitchEvent(twitchEventCreateRequest: ApiKellerBotTwitchEvent) : Promise<AxiosResponse<BaseResponse<ApiKellerBotTwitchEvent>>> {
     return api.post('/api/v1/event/twitch', twitchEventCreateRequest);
+  }
+
+  testTwitchEvent(twitchEventId: number) : Promise<AxiosResponse<never>> {
+    return api.post(`/api/v1/event/twitch/${twitchEventId}/action/test`)
   }
 
   getChatStream() : Promise<AxiosResponse> {
@@ -50,23 +57,39 @@ class KellerBot {
     return api.post('/api/v1/event/chat', message)
   }
 
-  getAlerts():Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert[]>>> {
-    return api.get('/api/v1/alert')
+  getActions():Promise<AxiosResponse<BaseResponse<ApiKellerBotAction[]>>> {
+    return api.get('/api/v1/action')
   }
 
-  createAlert(alert: ApiKellerBotAlertCreateRequest):Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
-    return api.post('/api/v1/alert', alert)
+  getAction(actionId: number):Promise<AxiosResponse<BaseResponse<ApiKellerBotAction>>> {
+    return api.get(`/api/v1/action/${actionId}`)
   }
 
-  uploadAlertFile(alertId: number, file: File) : Promise<AxiosResponse<BaseResponse<ApiKellerBotAlert>>> {
+  createAction(action: ApiKellerBotAction):Promise<AxiosResponse<BaseResponse<ApiKellerBotAction>>> {
+    return api.post('/api/v1/action', action)
+  }
+
+  updateAction(actionId: number, action: ApiKellerBotAction) : Promise<AxiosResponse<BaseResponse<ApiKellerBotAction>>> {
+    return api.put(`/api/v1/action/${actionId}`, action)
+  }
+
+  uploadActionFile(actionId: number, file: File) : Promise<AxiosResponse<BaseResponse<ApiKellerBotAction>>> {
     const fileData = new FormData()
     fileData.append('file', file);
 
-    return api.post(`/api/v1/alert/${alertId}/upload`, fileData, {
+    return api.post(`/api/v1/action/${actionId}/upload`, fileData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
+  }
+
+  getEvents() : Promise<AxiosResponse<BaseResponse<ApiKellerBotEvent[]>>> {
+    return api.get('/api/v1/event')
+  }
+
+  replayEvent(eventId: number) : Promise<AxiosResponse<never>> {
+    return api.post(`/api/v1/event/${eventId}/action/replay`)
   }
 }
 

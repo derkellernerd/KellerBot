@@ -7,24 +7,24 @@ import (
 	"github.com/derkellernerd/kellerbot/model"
 )
 
-type Action struct {
+type Event struct {
 	env *core.Environment
 }
 
-func NewAction(env *core.Environment) *Action {
-	return &Action{
+func NewEvent(env *core.Environment) *Event {
+	return &Event{
 		env: env,
 	}
 }
 
-func (r Action) Migrate() error {
+func (r Event) Migrate() error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	err = db.AutoMigrate(&model.Action{})
+	err = db.AutoMigrate(&model.Event{})
 	if err != nil {
 		return err
 	}
@@ -32,43 +32,43 @@ func (r Action) Migrate() error {
 	return nil
 }
 
-var ErrActionNotFound = errors.New("Action not found")
+var ErrEventNotFound = errors.New("Event not found")
 
-func (r Action) ActionFindAll() ([]model.Action, error) {
-	var items []model.Action
+func (r Event) EventFindAll() ([]model.Event, error) {
+	var items []model.Event
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return items, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	result := db.Find(&items)
+	result := db.Order("created_at desc").Find(&items)
 	if result.Error != nil {
 		return items, result.Error
 	}
 	return items, result.Error
 }
 
-func (r Action) ActionFindById(id uint) (model.Action, error) {
+func (r Event) EventFindById(id uint) (model.Event, error) {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
-		return model.Action{}, err
+		return model.Event{}, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	var item model.Action
+	var item model.Event
 	result := db.Find(&item, "id = ?", id)
 	if result.Error != nil {
-		return model.Action{}, result.Error
+		return model.Event{}, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		return model.Action{}, ErrActionNotFound
+		return model.Event{}, ErrEventNotFound
 	}
 	return item, result.Error
 }
 
-func (r Action) ActionInsert(item *model.Action) error {
+func (r Event) EventInsert(item *model.Event) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (r Action) ActionInsert(item *model.Action) error {
 	return result.Error
 }
 
-func (r Action) ActionUpdate(item *model.Action) error {
+func (r Event) EventUpdate(item *model.Event) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (r Action) ActionUpdate(item *model.Action) error {
 	return result.Error
 }
 
-func (r Action) ActionDelete(item *model.Action) error {
+func (r Event) EventDelete(item *model.Event) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -99,23 +99,4 @@ func (r Action) ActionDelete(item *model.Action) error {
 
 	result := db.Unscoped().Delete(item)
 	return result.Error
-}
-
-func (r Action) ActionFindByActionName(actionName string) (model.Action, error) {
-	db, err := r.env.DatabaseManager.GetConnection()
-	if err != nil {
-		return model.Action{}, err
-	}
-	defer r.env.DatabaseManager.CloseConnection(db)
-
-	var item model.Action
-	result := db.Find(&item, "action_name = ?", actionName)
-	if result.Error != nil {
-		return model.Action{}, result.Error
-	}
-
-	if result.RowsAffected == 0 {
-		return model.Action{}, ErrActionNotFound
-	}
-	return item, result.Error
 }

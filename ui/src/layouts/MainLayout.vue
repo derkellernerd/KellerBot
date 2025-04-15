@@ -11,7 +11,7 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title>
+        <q-toolbar-title @click="gotoDashboard">
           KellerBot
         </q-toolbar-title>
 
@@ -30,14 +30,14 @@
         >
           Menu
         </q-item-label>
-        <q-item clickable v-ripple :to="{name: 'CommandOverview'}">
+        <q-item clickable v-ripple :to="{name: 'ChatCommandOverview'}">
           <q-item-section>
             <q-item-label>Command</q-item-label>
           </q-item-section>
         </q-item>
-        <q-item clickable v-ripple :to="{name: 'AlertOverview'}">
+        <q-item clickable v-ripple :to="{name: 'ActionOverview'}">
           <q-item-section>
-            <q-item-label>Alert</q-item-label>
+            <q-item-label>Actions</q-item-label>
           </q-item-section>
         </q-item>
         <q-item clickable v-ripple :to="{name: 'Event'}">
@@ -61,10 +61,16 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 const leftDrawerOpen = ref(false);
+const router = useRouter();
 
 function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+
+function gotoDashboard() {
+  void router.push({name: 'Dashboard'})
 }
 </script>

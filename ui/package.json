@@ -18,6 +18,8 @@
     "@quasar/extras": "^1.16.4",
     "@server-sent-stream/web": "^1.0.3",
     "axios": "^1.2.1",
+    "json-editor-vue": "^0.18.1",
+    "obs-websocket-js": "^5.0.6",
     "pinia": "^3.0.1",
     "quasar": "^2.16.0",
     "vue": "^3.4.18",

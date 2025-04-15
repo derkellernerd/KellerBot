@@ -1,5 +1,8 @@
 import { defineBoot } from '#q-app/wrappers';
+import type { AxiosError} from 'axios';
 import axios, { type AxiosInstance } from 'axios';
+import { showErrorToast } from 'src/helper/functions';
+import type { BaseResponse } from 'src/models/base_response';
 
 declare module 'vue' {
   interface ComponentCustomProperties {
@@ -20,6 +23,13 @@ const api = axios.create({
     'Content-Type': 'application/json',
   }
 });
+
+api.interceptors.response.use((response) => {
+  return response;
+}, (error: AxiosError<BaseResponse<never>>) => {
+  showErrorToast(error.response?.data?.Error ?? error.message, error.status?.toString() ?? error.name);
+  return Promise.reject(error)
+})
 
 export default defineBoot(({ app }) => {
   // for use inside Vue files (Options API) through this.$axios and this.$api

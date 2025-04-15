@@ -4,13 +4,14 @@ CLOSED: [2025-03-19 Wed 21:47]
 ** TODO AccessToken refreshen mit RefreshToken
 ** DONE Command Datenbank aufbauen
 CLOSED: [2025-03-19 Wed 22:38]
-** Sound Alerts
+** DONE Sound Alerts
 ** DONE Licht steuern
 ** Chat Event Stream sollte auch funktionieren wenn kein Abnehmer da ist oder mehrere Abnehmer da sind
 * Ideen
-** Video/Gif Alerts
-** Bisschen Web Frontend
+** DONE Video/Gif Alerts
+** DONE Bisschen Web Frontend
 ** CLI Client
 ** DeviceCode supporten
 ** Chatbox
-
+** DONE Alerts
+*** DONE Bird is the Word - mit Family Guy Gif

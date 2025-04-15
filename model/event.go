@@ -1,38 +1,42 @@
 package model
 
 import (
-	"github.com/goccy/go-json"
+	"encoding/json"
+
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
-type ChatEvent struct {
-	User    string `binding:"required"`
-	Message string `binding:"required"`
+const (
+	EVENT_SOURCE_TWITCH EventSource = "TWITCH"
+)
+
+type EventSource string
+
+type Event struct {
+	gorm.Model
+	EventName           string
+	Source              EventSource
+	Payload             datatypes.JSON
+	ExecutingActionName string
 }
 
-func (c *ChatEvent) ToJson() (string, error) {
-	bytes, err := json.Marshal(c)
+func (e *Event) SetPayload(data any) error {
+	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		return "", nil
+		return err
 	}
 
-	return string(bytes), nil
+	e.Payload = datatypes.JSON(jsonBytes)
+	return nil
 }
 
-type AlertEventRequest struct {
-	Name    string `binding:"required"`
-	Payload map[string]any
-}
-
-func (a *AlertEventRequest) ToJson() (string, error) {
-	bytes, err := json.Marshal(a)
+func (e *Event) GetPayload() (map[string]any, error) {
+	var payload map[string]any
+	jsonBytes, err := e.Payload.MarshalJSON()
 	if err != nil {
-		return "", nil
+		return nil, err
 	}
-
-	return string(bytes), nil
-}
-
-type AlertEvent struct {
-	Alerts  Alert
-	Payload map[string]any
+	err = json.Unmarshal(jsonBytes, &payload)
+	return payload, err
 }

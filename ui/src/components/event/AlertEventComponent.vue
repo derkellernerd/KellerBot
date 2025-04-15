@@ -2,56 +2,48 @@
 import { onMounted, ref } from 'vue';
 import Keller_bot from 'src/service/keller_bot';
 import EventSourceStream from '@server-sent-stream/web';
-import type { ApiKellerBotAlert } from 'src/models/keller_bot_alert';
-import { KellerBotAlertType, KellerBotAlert } from 'src/models/keller_bot_alert';
+import { KellerBotAction, KellerBotActionType } from 'src/models/keller_bot_action';
+import type { ApiKellerBotAction } from 'src/models/keller_bot_action';
 
 const videoSource = ref<string>();
 const gifSource = ref<string>();
 const audioSource = ref<string>();
 const textAlert = ref<string>();
-const duration = ref<number>(2000);
 
-function playSound(alert: KellerBotAlert) {
-  audioSource.value = `http://localhost:8080/alert/${alert.ID}`;
+function playSound(action: KellerBotAction) {
+
+  audioSource.value = `http://localhost:8080/action/${action.ID}`;
   setTimeout(function () {
     audioSource.value = undefined;
-  }, duration.value);
+  }, action.duration);
 }
 
-function playGif(alert: KellerBotAlert) {
-  gifSource.value = `http://localhost:8080/alert/${alert.ID}`;
+function playGif(action: KellerBotAction) {
+  gifSource.value = `http://localhost:8080/action/${action.ID}`;
   setTimeout(function () {
     gifSource.value = undefined;
-  }, duration.value);
+  }, action.duration);
 }
 
-function showText(alert: KellerBotAlert) {
-  textAlert.value = alert.textAlert.Text;
+function showText(action: KellerBotAction) {
+  textAlert.value = action.actionText.Text;
   setTimeout(function () {
     textAlert.value = undefined;
-  }, duration.value);
+  }, action.duration);
 }
 
-function incomingAlert(alert: KellerBotAlert, isChildAlert?: boolean) {
-  console.log(`processing alert: ${alert.Name} -> ${alert.Type}`);
-  if (!isChildAlert) {
-    duration.value = alert.duration;
-  }
+function incomingAlert(action: KellerBotAction) {
+  console.log(`processing alert: ${action.ActionName} -> ${action.ActionType}`);
 
-  switch (alert.Type) {
-    case KellerBotAlertType.Text:
-      showText(alert);
+  switch (action.ActionType) {
+    case KellerBotActionType.Text:
+      showText(action);
       break;
-    case KellerBotAlertType.Composition:
-      alert.composition.Alerts.forEach((childAlert) => {
-        incomingAlert(KellerBotAlert.fromApi(childAlert), true);
-      });
+    case KellerBotActionType.Sound:
+      playSound(action);
       break;
-    case KellerBotAlertType.Sound:
-      playSound(alert);
-      break;
-    case KellerBotAlertType.Gif:
-      playGif(alert);
+    case KellerBotActionType.Gif:
+      playGif(action);
       break;
   }
 }
@@ -70,19 +62,16 @@ function getStream() {
       while (true) {
         const { done, value } = await reader.read();
 
-        const alerts = (JSON.parse(value!.data) as ApiKellerBotAlert[]).map((s) =>
-          KellerBotAlert.fromApi(s),
-        );
+        console.log('incoming data: ',  value!.data)
+        const alert = KellerBotAction.fromApi(JSON.parse(value!.data) as ApiKellerBotAction);
 
         if (done) break;
-        alerts.forEach((s) => {
-          incomingAlert(s);
-        });
+        incomingAlert(alert);
       }
       console.log('finish');
     })
-    .catch(() => {
-      //TODO: fill
+    .catch((error) => {
+      console.log('Error: ', error);
     })
     .finally(() => {
       getStream();

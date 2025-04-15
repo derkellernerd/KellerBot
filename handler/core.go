@@ -3,7 +3,7 @@ package handler
 import "time"
 
 type ErrorResponse struct {
-	Error     error
+	Error     string
 	Timestamp time.Time
 }
 
@@ -14,7 +14,7 @@ type SuccessResponse struct {
 
 func NewErrorResponse(err error) ErrorResponse {
 	return ErrorResponse{
-		Error:     err,
+		Error:     err.Error(),
 		Timestamp: time.Now(),
 	}
 }

@@ -1,7 +1,8 @@
 package model
 
 import (
-	"github.com/goccy/go-json"
+	"encoding/json"
+
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -33,24 +34,29 @@ type ActionTypeChatAnswer struct {
 }
 
 type ActionTypeComposition struct {
-	Actions []string
+	Actions    []string
+	DurationMs int64
+	PostAction string
 }
 
 type ActionTypeSound struct {
-	FileName string
-	Gain     float64
+	FileName   string
+	Gain       float64
+	DurationMs int64
 }
 
 type ActionTypeGif struct {
-	FileName string
+	FileName   string
+	DurationMs int64
 }
 
 type ActionTypeText struct {
-	Text string
+	Text       string
+	DurationMs int64
 }
 
 type ActionTypes interface {
-	ActionTypeChatMessage | ActionTypeChatAnswer | ActionTypeGif | ActionTypeSound | ActionTypeHttp
+	ActionTypeChatMessage | ActionTypeChatAnswer | ActionTypeGif | ActionTypeSound | ActionTypeHttp | ActionTypeComposition | ActionTypeText
 }
 
 type Action struct {

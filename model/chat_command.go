@@ -19,3 +19,14 @@ func (c *ChatCommand) Increment() {
 	c.Used += 1
 	c.LastUsed = time.Now()
 }
+
+type ChatCommandCreateRequest struct {
+	Command          string `binding:"required"`
+	Action           string `binding:"required"`
+	TimeoutInSeconds uint64
+}
+
+type ChatCommandUpdateRequest struct {
+	Action           string `binding:"required"`
+	TimeoutInSeconds uint64
+}

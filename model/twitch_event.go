@@ -25,14 +25,14 @@ func (t *TwitchEventLog) SetData(data any) error {
 type TwitchEvent struct {
 	gorm.Model
 	TwitchEventSubscription string `gorm:"unique"`
-	AlertName               string
+	ActionName              string
 }
 
 type TwitchEventCreateRequest struct {
 	TwitchEventSubscription string `binding:"required"`
-	AlertName               string `binding:"required"`
+	ActionName              string `binding:"required"`
 }
 
 type TwitchEventUpdateRequest struct {
-	AlertName string `binding:"required"`
+	ActionName string `binding:"required"`
 }
