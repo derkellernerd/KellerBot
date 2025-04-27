@@ -15,6 +15,8 @@ type EventSource string
 
 type Event struct {
 	gorm.Model
+	OwnerID             uint
+	Owner               User
 	EventName           string
 	Source              EventSource
 	Payload             datatypes.JSON

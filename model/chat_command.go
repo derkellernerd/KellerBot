@@ -8,6 +8,8 @@ import (
 
 type ChatCommand struct {
 	gorm.Model
+	OwnerID          uint
+	Owner            User
 	Command          string `gorm:"uniqueIndex"`
 	Used             uint64
 	TimeoutInSeconds uint64

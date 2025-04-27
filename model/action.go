@@ -61,6 +61,8 @@ type ActionTypes interface {
 
 type Action struct {
 	gorm.Model
+	OwnerID    uint
+	Owner      User
 	ActionName string `gorm:"uniqueIndex"`
 	ActionType ActionType
 	Data       datatypes.JSON
