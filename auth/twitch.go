@@ -22,12 +22,6 @@ type TwitchAuth struct {
 	callback func()
 }
 
-const (
-	stateCallbackKey = "oauth-state-callback"
-	oauthSessionName = "oauth-session"
-	oauthTokenKey    = "oauth-token"
-)
-
 var (
 	scopes       = []string{"user:read:chat", "user:bot", "user:write:chat", "moderator:read:followers"}
 	redirectURL  = "http://localhost:8080/redirect"

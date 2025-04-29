@@ -9,6 +9,10 @@ import type {
 import { type ApiKellerBotChatCommand } from 'src/models/keller_bot_chat_command';
 
 class KellerBot {
+  twitchLogin() : Promise<AxiosResponse<BaseResponse<never>>> {
+    return api.get('/api/v1/twitch/login')
+  }
+
   getChatCommands():Promise<AxiosResponse<BaseResponse<ApiKellerBotChatCommand[]>>> {
     return api.get('/api/v1/chat_command')
   }

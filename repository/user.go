@@ -7,24 +7,24 @@ import (
 	"github.com/derkellernerd/kellerbot/model"
 )
 
-type Command struct {
+type User struct {
 	env *core.Environment
 }
 
-func NewCommand(env *core.Environment) *Command {
-	return &Command{
+func NewUser(env *core.Environment) *User {
+	return &User{
 		env: env,
 	}
 }
 
-func (r Command) Migrate() error {
+func (r User) Migrate() error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	err = db.AutoMigrate(&model.Command{})
+	err = db.AutoMigrate(&model.User{})
 	if err != nil {
 		return err
 	}
@@ -32,10 +32,10 @@ func (r Command) Migrate() error {
 	return nil
 }
 
-var ErrCommandNotFound = errors.New("Command not found")
+var ErrUserNotFound = errors.New("User not found")
 
-func (r Command) CommandFindAll() ([]model.Command, error) {
-	var items []model.Command
+func (r User) UserFindAll() ([]model.User, error) {
+	var items []model.User
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return items, err
@@ -49,26 +49,26 @@ func (r Command) CommandFindAll() ([]model.Command, error) {
 	return items, result.Error
 }
 
-func (r Command) CommandFindById(id uint) (model.Command, error) {
+func (r User) UserFindById(id uint) (model.User, error) {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
-		return model.Command{}, err
+		return model.User{}, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	var item model.Command
+	var item model.User
 	result := db.Find(&item, "id = ?", id)
 	if result.Error != nil {
-		return model.Command{}, result.Error
+		return model.User{}, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		return model.Command{}, ErrCommandNotFound
+		return model.User{}, ErrUserNotFound
 	}
 	return item, result.Error
 }
 
-func (r Command) CommandInsert(item *model.Command) error {
+func (r User) UserInsert(item *model.User) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (r Command) CommandInsert(item *model.Command) error {
 	return result.Error
 }
 
-func (r Command) CommandUpdate(item *model.Command) error {
+func (r User) UserUpdate(item *model.User) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (r Command) CommandUpdate(item *model.Command) error {
 	return result.Error
 }
 
-func (r Command) CommandDelete(item *model.Command) error {
+func (r User) UserDelete(item *model.User) error {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
 		return err
@@ -101,21 +101,21 @@ func (r Command) CommandDelete(item *model.Command) error {
 	return result.Error
 }
 
-func (r Command) CommandFindByCommand(command string) (model.Command, error) {
+func (r User) UserFindByUsername(username string) (model.User, error) {
 	db, err := r.env.DatabaseManager.GetConnection()
 	if err != nil {
-		return model.Command{}, err
+		return model.User{}, err
 	}
 	defer r.env.DatabaseManager.CloseConnection(db)
 
-	var item model.Command
-	result := db.Find(&item, "command = ?", command)
+	var item model.User
+	result := db.Find(&item, "username = ?", username)
 	if result.Error != nil {
-		return model.Command{}, result.Error
+		return model.User{}, result.Error
 	}
 
 	if result.RowsAffected == 0 {
-		return model.Command{}, ErrCommandNotFound
+		return model.User{}, ErrUserNotFound
 	}
 	return item, result.Error
 }

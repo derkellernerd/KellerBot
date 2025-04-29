@@ -1,13 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
 	"log"
-	"os"
 
-	"github.com/derkellernerd/kellerbot/auth"
-	"github.com/derkellernerd/kellerbot/chat"
 	"github.com/derkellernerd/kellerbot/core"
 	"github.com/derkellernerd/kellerbot/database"
 	"github.com/derkellernerd/kellerbot/handler"
@@ -23,14 +18,15 @@ const cacheFileName = "/home/sebastian/.cache/kellerbot.json"
 func main() {
 	log.Printf("Hallo, ich bin KellerBot der Twitch Bot: %s", Version)
 
-	twitchSession, err := loadTwitchSession()
+	databaseManager := database.NewDatabaseManager()
+	env := core.NewEnvironment()
+	env.DatabaseManager = databaseManager
+
+	userRepo := repository.NewUser(env)
+	err := userRepo.Migrate()
 	if err != nil {
 		panic(err)
 	}
-
-	databaseManager := database.NewDatabaseManager()
-	env := core.NewEnvironment(twitchSession)
-	env.DatabaseManager = databaseManager
 
 	actionRepo := repository.NewAction(env)
 	err = actionRepo.Migrate()
@@ -56,6 +52,7 @@ func main() {
 		panic(err)
 	}
 
+	twitchAuthHandler := handler.NewTwitchAuth(env, userRepo)
 	actionWorker := worker.NewAction(env, actionRepo)
 	actionHandler := handler.NewAction(env, actionRepo)
 	twitchEventHandler := handler.NewTwitchEvent(env, twitchEventRepo, actionWorker)
@@ -65,26 +62,14 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.AcceptCors)
 
-	chat, err := chat.NewChat(env, twitchEventRepo, chatCommandRepo, actionWorker, eventRepo)
-
-	_ = auth.NewTwitchAuth(env, r, func() {
-		saveTwitchSession(env.TwitchSession)
-		go chat.Start()
-		if err != nil {
-			panic(err)
-		}
-	})
-
-	if twitchSession.IsAuthenticated() {
-		log.Println("no login needed")
-		go chat.Start()
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	apiV1 := r.Group("api/v1")
 	{
+		twitch := apiV1.Group("twitch")
+		{
+			twitch.GET("login", twitchAuthHandler.Login)
+			twitch.GET("callback", twitchAuthHandler.Callback)
+		}
+
 		event := apiV1.Group("event")
 		{
 			event.GET("", eventHandler.EventGetAll)
@@ -125,37 +110,4 @@ func main() {
 	r.GET("action/:actionId", middleware.HeadersNoCache(), actionHandler.ActionGetFile)
 
 	r.Run()
-}
-
-func loadTwitchSession() (*core.TwitchSession, error) {
-	twitchSession := &core.TwitchSession{}
-	if _, err := os.Stat(cacheFileName); errors.Is(err, os.ErrNotExist) {
-		return twitchSession, nil
-	}
-
-	fileContent, err := os.ReadFile(cacheFileName)
-	if err != nil {
-		return twitchSession, err
-	}
-
-	err = json.Unmarshal(fileContent, twitchSession)
-	if err != nil {
-		return twitchSession, err
-	}
-
-	log.Printf("Loaded Session from: %s", cacheFileName)
-
-	return twitchSession, nil
-}
-
-func saveTwitchSession(twitchSession *core.TwitchSession) error {
-	jsonBytes, err := json.Marshal(twitchSession)
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(cacheFileName, jsonBytes, 0600)
-
-	log.Printf("Saved Session to: %s", cacheFileName)
-	return err
 }
