@@ -6,27 +6,25 @@ import (
 	"github.com/derkellernerd/kellerbot/database"
 )
 
-type Environment struct {
-	DatabaseManager *database.DatabaseManager
-	Twitch          struct {
-		UserId       string
-		ClientId     string
-		ClientSecret string
-	}
-	TwitchSession *TwitchSession
+type EnvironmentTwitchSettings struct {
+	ClientId     string
+	ClientSecret string
+	CookieSecret string
+	RedirectUrl  string
 }
 
-func NewEnvironment(twitchSession *TwitchSession) *Environment {
+type Environment struct {
+	DatabaseManager *database.DatabaseManager
+	Twitch          EnvironmentTwitchSettings
+}
+
+func NewEnvironment() *Environment {
 	return &Environment{
-		Twitch: struct {
-			UserId       string
-			ClientId     string
-			ClientSecret string
-		}{
-			UserId:       os.Getenv("TWITCH_USER_ID"),
+		Twitch: EnvironmentTwitchSettings{
 			ClientId:     os.Getenv("TWITCH_CLIENT_ID"),
 			ClientSecret: os.Getenv("TWITCH_CLIENT_SECRET"),
+			CookieSecret: os.Getenv("TWITCH_COOKIE_SECRET"),
+			RedirectUrl:  os.Getenv("TWITCH_REDIRECT_URL"),
 		},
-		TwitchSession: twitchSession,
 	}
 }
