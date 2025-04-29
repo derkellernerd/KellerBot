@@ -15,3 +15,4 @@ CLOSED: [2025-03-19 Wed 22:38]
 ** Chatbox
 ** DONE Alerts
 *** DONE Bird is the Word - mit Family Guy Gif
+** Counter Actions

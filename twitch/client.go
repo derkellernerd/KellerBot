@@ -28,7 +28,7 @@ func httpApiRequest(env *core.Environment, endpoint string, payload any) error {
 	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewReader(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Client-Id", env.Twitch.ClientId)
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", env.TwitchSession.AccessToken))
+	//	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", env.TwitchSession.AccessToken))
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -47,9 +47,9 @@ func httpApiRequest(env *core.Environment, endpoint string, payload any) error {
 
 func SendChatAnswer(env *core.Environment, messageId string, message string, a ...any) error {
 	payload := TwitchChatMessage{
-		BroadcasterId: env.Twitch.UserId,
-		SenderId:      env.Twitch.UserId,
-		Message:       fmt.Sprintf(message, a...),
+		//	BroadcasterId: env.Twitch.UserId,
+		//	SenderId:      env.Twitch.UserId,
+		Message: fmt.Sprintf(message, a...),
 	}
 
 	if messageId != "" {

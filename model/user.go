@@ -6,7 +6,8 @@ import (
 
 type User struct {
 	gorm.Model
-	Identifier    string
-	Username      string
-	TwitchBotAuth TwitchAuth
+	Identifier     string
+	Username       string
+	TwitchUserAuth TwitchAuth
+	TwitchBotAuth  TwitchAuth
 }
