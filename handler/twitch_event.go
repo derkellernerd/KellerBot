@@ -132,6 +132,12 @@ func (h *TwitchEvent) TwitchEventTest(c *gin.Context) {
 	case "channel.follow":
 		payload["user_name"] = "derkellerbot"
 		break
+	case "channel.subscription":
+		payload["user_name"] = "derkellerbot"
+		break
+	case "channel.subscription.gift":
+		payload["user_name"] = "lordv55"
+		break
 	}
 
 	err = h.actionWorker.HandleActionByName(twitchEvent.ActionName, payload)

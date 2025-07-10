@@ -11,7 +11,6 @@ const audioSource = ref<string>();
 const textAlert = ref<string>();
 
 function playSound(action: KellerBotAction) {
-
   audioSource.value = `http://localhost:8080/action/${action.ID}`;
   setTimeout(function () {
     audioSource.value = undefined;
@@ -62,7 +61,7 @@ function getStream() {
       while (true) {
         const { done, value } = await reader.read();
 
-        console.log('incoming data: ',  value!.data)
+        console.log('incoming data: ', value!.data);
         const alert = KellerBotAction.fromApi(JSON.parse(value!.data) as ApiKellerBotAction);
 
         if (done) break;

@@ -34,6 +34,8 @@ func (c *Chat) Start() error {
 			twitch.SubChannelChatMessage,
 			twitch.SubChannelFollow,
 			twitch.SubChannelRaid,
+			twitch.SubChannelSubscribe,
+			twitch.SubChannelSubscriptionGift,
 		}
 
 		for _, event := range events {
@@ -56,6 +58,72 @@ func (c *Chat) Start() error {
 			}
 		}
 	})
+	c.client.OnEventChannelSubscribe(func(sub twitch.EventChannelSubscribe) {
+		event, err := c.twitchEvent.TwitchEventFindByTwitchEventSubscripton(string(twitch.SubChannelSubscribe))
+		if err != nil {
+			if err == repository.ErrTwitchEventNotFound {
+				return
+			}
+			log.Println(err)
+		}
+
+		payload := map[string]any{
+			"user_name": sub.UserName,
+			"tier":      sub.Tier,
+		}
+
+		err = c.actionWorker.HandleActionByName(event.ActionName, payload)
+		if err != nil {
+			log.Println(err)
+		}
+
+		eventLog := model.Event{
+			EventName:           string(twitch.SubChannelSubscribe),
+			Source:              model.EVENT_SOURCE_TWITCH,
+			ExecutingActionName: event.ActionName,
+		}
+
+		eventLog.SetPayload(payload)
+		err = c.eventRepository.EventInsert(&eventLog)
+		if err != nil {
+			log.Println(err)
+		}
+	})
+
+	c.client.OnEventChannelSubscriptionGift(func(sub twitch.EventChannelSubscriptionGift) {
+		event, err := c.twitchEvent.TwitchEventFindByTwitchEventSubscripton(string(twitch.SubChannelSubscriptionGift))
+		if err != nil {
+			if err == repository.ErrTwitchEventNotFound {
+				return
+			}
+			log.Println(err)
+		}
+
+		log.Printf("%#v", sub)
+
+		payload := map[string]any{
+			"user_name": sub.UserName,
+			"tier":      sub.Tier,
+		}
+
+		err = c.actionWorker.HandleActionByName(event.ActionName, payload)
+		if err != nil {
+			log.Println(err)
+		}
+
+		eventLog := model.Event{
+			EventName:           string(twitch.SubChannelSubscriptionGift),
+			Source:              model.EVENT_SOURCE_TWITCH,
+			ExecutingActionName: event.ActionName,
+		}
+
+		eventLog.SetPayload(payload)
+		err = c.eventRepository.EventInsert(&eventLog)
+		if err != nil {
+			log.Println(err)
+		}
+	})
+
 	c.client.OnEventChannelRaid(func(raid twitch.EventChannelRaid) {
 		event, err := c.twitchEvent.TwitchEventFindByTwitchEventSubscripton(string(twitch.SubChannelRaid))
 		if err != nil {
